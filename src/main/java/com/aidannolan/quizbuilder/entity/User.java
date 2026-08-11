@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+import java.util.ArrayList;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -25,4 +28,7 @@ public class User extends BaseEntity {
 
     @Column(nullable = false)
     private String passwordHash;
+
+    @OneToMany(mappedBy = "owner")
+    private List<Quiz> quizzes = new ArrayList<>();
 }
