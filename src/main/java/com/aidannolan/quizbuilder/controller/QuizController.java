@@ -21,4 +21,9 @@ public class QuizController {
     ) {
         return quizService.createQuiz(request);
     }
+
+    @GetMapping("/{id}")
+    public QuizResponseDTO getQuizById(@PathVariable Long id) {
+        return quizService.getQuizById(id);
+    }
 }
