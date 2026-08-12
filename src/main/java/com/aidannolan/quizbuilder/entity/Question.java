@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+import java.util.ArrayList;
+
 @Entity
 @Table(name = "questions")
 @Getter
@@ -30,4 +33,7 @@ public class Question extends BaseEntity {
 
     @Column(nullable = false)
     private Integer position;
+
+    @OneToMany(mappedBy = "question")
+    private List<Answer> answers = new ArrayList<>();
 }
