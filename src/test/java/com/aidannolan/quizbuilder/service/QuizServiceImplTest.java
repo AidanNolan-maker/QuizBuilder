@@ -16,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -95,22 +96,88 @@ public class QuizServiceImplTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenOwnerDoesNotExist() {
-        QuizRequestDTO request = new QuizRequestDTO(
-                999L,
+    void shouldGetQuizzesByOwnerId() {
+        Long ownerId = 1L;
+
+        User user = new User();
+        user.setId(ownerId);
+
+        Quiz quiz = new Quiz();
+        quiz.setId(10L);
+        quiz.setOwner(user);
+        quiz.setTitle("Java Fundamentals");
+        quiz.setDescription("A quiz about Java.");
+        quiz.setStatus(QuizStatus.DRAFT);
+
+        QuizResponseDTO response = new QuizResponseDTO(
+                10L,
+                ownerId,
                 "Java Fundamentals",
                 "A quiz about Java.",
-                QuizStatus.DRAFT
+                QuizStatus.DRAFT,
+                null,
+                null
         );
 
-        when(userRepository.findById(999L))
+        when(userRepository.findById(ownerId))
+                .thenReturn(Optional.of(user));
+
+        when(quizRepository.findByOwnerId(ownerId))
+                .thenReturn(List.of(quiz));
+
+        when(quizMapper.toResponseDTO(quiz))
+                .thenReturn(response);
+
+        List<QuizResponseDTO> result =
+                quizService.getQuizzesByOwnerId(ownerId);
+
+        assertThat(result)
+                .hasSize(1)
+                .containsExactly(response);
+
+        verify(userRepository).findById(ownerId);
+        verify(quizRepository).findByOwnerId(ownerId);
+        verify(quizMapper).toResponseDTO(quiz);
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenOwnerHasNoQuizzes() {
+        Long ownerId = 1L;
+
+        User user = new User();
+        user.setId(ownerId);
+
+        when(userRepository.findById(ownerId))
+            .thenReturn(Optional.of(user));
+
+        when(quizRepository.findByOwnerId(ownerId))
+                .thenReturn(List.of());
+
+        List<QuizResponseDTO> result =
+                quizService.getQuizzesByOwnerId(ownerId);
+
+        assertThat(result).isEmpty();
+
+        verify(userRepository).findById(ownerId);
+        verify(quizRepository).findByOwnerId(ownerId);
+        verifyNoInteractions(quizMapper);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenOwnerDoesNotExist() {
+        Long ownerId = 999L;
+
+        when(userRepository.findById(ownerId))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> quizService.createQuiz(request))
+        assertThatThrownBy(
+                () -> quizService.getQuizzesByOwnerId(ownerId)
+        )
                 .isInstanceOf(UserNotFoundException.class)
                 .hasMessage("User not found: 999");
 
-        verify(userRepository).findById(999L);
-        verify(quizRepository, never()).save(any());
+        verify(userRepository).findById(ownerId);
+        verifyNoInteractions(quizRepository);
+        verifyNoInteractions(quizMapper);
     }
 }

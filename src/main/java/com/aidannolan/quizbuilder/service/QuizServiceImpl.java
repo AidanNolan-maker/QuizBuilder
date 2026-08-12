@@ -49,6 +49,9 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     public List<QuizResponseDTO> getQuizzesByOwnerId(Long ownerId) {
+        userRepository.findById(ownerId)
+                .orElseThrow(() -> new UserNotFoundException(ownerId));
+
         return quizRepository.findByOwnerId(ownerId)
                 .stream()
                 .map(quizMapper::toResponseDTO)

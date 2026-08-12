@@ -20,18 +20,18 @@ public class UserRepositoryTest {
     void shouldSaveAndFindUserByUsername() {
         User user = new User();
 
-        user.setUsername("testuser");
+        user.setUsername("repository-test-user");
         user.setEmail("test@example.com");
         user.setPasswordHash("temporary-test-hash");
 
         User savedUser = userRepository.save(user);
 
         Optional<User> foundUser =
-                userRepository.findByUsername("testuser");
+                userRepository.findByUsername("repository-test-user");
 
         assertThat(savedUser.getId()).isNotNull();
         assertThat(foundUser).isPresent();
-        assertThat(foundUser.get().getUsername()).isEqualTo("testuser");
+        assertThat(foundUser.get().getUsername()).isEqualTo("repository-test-user");
         assertThat(foundUser.get().getEmail()).isEqualTo("test@example.com");
 
         assertThat(savedUser.getCreatedAt()).isNotNull();
@@ -42,7 +42,7 @@ public class UserRepositoryTest {
     void shouldUpdateUpdatedAtWhenUserChanges() {
         User user = new User();
 
-        user.setUsername("testuser");
+        user.setUsername("updated-at-test-user");
         user.setEmail("test@example.com");
         user.setPasswordHash("temporary-test-hash");
 

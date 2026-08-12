@@ -26,4 +26,5 @@ public class QuizController {
     public QuizResponseDTO getQuizById(@PathVariable Long id) {
         return quizService.getQuizById(id);
     }
+
 }
