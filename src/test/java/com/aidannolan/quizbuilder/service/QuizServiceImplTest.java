@@ -1,6 +1,7 @@
 package com.aidannolan.quizbuilder.service;
 
 import com.aidannolan.quizbuilder.entity.Quiz;
+import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -8,6 +9,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
@@ -31,5 +35,19 @@ public class QuizServiceImplTest {
         assertThat(result).isSameAs(quiz);
 
         verify(quizRepository).save(quiz);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenQuizDoesNotExist() {
+        Long quizId = 999L;
+
+        when(quizRepository.findById(quizId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> quizService.getQuizById(quizId))
+                .isInstanceOf(QuizNotFoundException.class)
+                .hasMessage("Quiz not found: 999");
+
+        verify(quizRepository).findById(quizId);
     }
 }

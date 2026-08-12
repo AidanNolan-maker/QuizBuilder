@@ -1,6 +1,7 @@
 package com.aidannolan.quizbuilder.service;
 
 import com.aidannolan.quizbuilder.entity.Quiz;
+import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ public class QuizServiceImpl implements QuizService {
     public Quiz getQuizById(Long id) {
         return quizRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Quiz not found: " + id));
+                        new QuizNotFoundException(id));
     }
 
     @Override
