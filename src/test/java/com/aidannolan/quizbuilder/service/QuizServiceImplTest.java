@@ -1,8 +1,15 @@
 package com.aidannolan.quizbuilder.service;
 
+import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
+import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;
 import com.aidannolan.quizbuilder.entity.Quiz;
+import com.aidannolan.quizbuilder.entity.QuizStatus;
+import com.aidannolan.quizbuilder.entity.User;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
+import com.aidannolan.quizbuilder.exception.UserNotFoundException;
+import com.aidannolan.quizbuilder.mapper.QuizMapper;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
+import com.aidannolan.quizbuilder.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,21 +27,57 @@ public class QuizServiceImplTest {
     @Mock
     private QuizRepository quizRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private QuizMapper quizMapper;
+
     @InjectMocks
     private QuizServiceImpl quizService;
 
     @Test
     void shouldCreateQuiz() {
+        User user = new User();
+        user.setId(1L);
+
+        QuizRequestDTO request = new QuizRequestDTO(
+                1L,
+                "Java Fundamentals",
+                "A quiz about Java.",
+                QuizStatus.DRAFT
+        );
+
         Quiz quiz = new Quiz();
+        Quiz savedQuiz = new Quiz();
 
-        when(quizRepository.save(quiz))
-                .thenReturn(quiz);
+        QuizResponseDTO response  = new QuizResponseDTO(
+                1L,
+                1L,
+                "Java Fundamentals",
+                "A quiz about Java.",
+                QuizStatus.DRAFT,
+                null,
+                null
+        );
 
-        Quiz result = quizService.createQuiz(quiz);
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(user));
 
-        assertThat(result).isSameAs(quiz);
+        when(quizRepository.save(any(Quiz.class)))
+                .thenReturn(savedQuiz);
 
-        verify(quizRepository).save(quiz);
+        when(quizMapper.toResponseDTO(savedQuiz))
+                .thenReturn(response);
+
+        QuizResponseDTO result =
+                quizService.createQuiz(request);
+
+        assertThat(result).isEqualTo(response);
+
+        verify(userRepository).findById(1L);
+        verify(quizRepository).save(any(Quiz.class));
+        verify(quizMapper).toResponseDTO(savedQuiz);
     }
 
     @Test
@@ -49,5 +92,25 @@ public class QuizServiceImplTest {
                 .hasMessage("Quiz not found: 999");
 
         verify(quizRepository).findById(quizId);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenOwnerDoesNotExist() {
+        QuizRequestDTO request = new QuizRequestDTO(
+                999L,
+                "Java Fundamentals",
+                "A quiz about Java.",
+                QuizStatus.DRAFT
+        );
+
+        when(userRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> quizService.createQuiz(request))
+                .isInstanceOf(UserNotFoundException.class)
+                .hasMessage("User not found: 999");
+
+        verify(userRepository).findById(999L);
+        verify(quizRepository, never()).save(any());
     }
 }

@@ -1,8 +1,14 @@
 package com.aidannolan.quizbuilder.service;
 
+import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
+import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;
 import com.aidannolan.quizbuilder.entity.Quiz;
+import com.aidannolan.quizbuilder.entity.User;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
+import com.aidannolan.quizbuilder.exception.UserNotFoundException;
+import com.aidannolan.quizbuilder.mapper.QuizMapper;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
+import com.aidannolan.quizbuilder.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,38 +18,68 @@ import java.util.List;
 @RequiredArgsConstructor
 public class QuizServiceImpl implements QuizService {
     private final QuizRepository quizRepository;
+    private final UserRepository userRepository;
+    private final QuizMapper quizMapper;
 
     @Override
-    public Quiz createQuiz(Quiz quiz) {
-        return quizRepository.save(quiz);
-    }
-
-    @Override
-    public Quiz getQuizById(Long id) {
-        return quizRepository.findById(id)
+    public QuizResponseDTO createQuiz(QuizRequestDTO request) {
+        User owner = userRepository.findById(request.ownerId())
                 .orElseThrow(() ->
-                        new QuizNotFoundException(id));
+                        new UserNotFoundException(request.ownerId()));
+
+        Quiz quiz = new Quiz();
+        quiz.setOwner(owner);
+        quiz.setTitle(request.title());
+        quiz.setDescription(request.description());
+        quiz.setStatus(request.status());
+
+        Quiz savedQuiz = quizRepository.save(quiz);
+
+        return quizMapper.toResponseDTO(savedQuiz);
+
     }
 
     @Override
-    public List<Quiz> getQuizzesByOwnerId(Long ownerId) {
-        return quizRepository.findByOwnerId(ownerId);
+    public QuizResponseDTO getQuizById(Long id) {
+        Quiz quiz = quizRepository.findById(id)
+                .orElseThrow(() -> new QuizNotFoundException(id));
+
+        return quizMapper.toResponseDTO(quiz);
     }
 
     @Override
-    public Quiz updateQuiz(Long id, Quiz quiz) {
-        Quiz existingQuiz = getQuizById(id);
+    public List<QuizResponseDTO> getQuizzesByOwnerId(Long ownerId) {
+        return quizRepository.findByOwnerId(ownerId)
+                .stream()
+                .map(quizMapper::toResponseDTO)
+                .toList();
+    }
 
-        existingQuiz.setTitle(quiz.getTitle());
-        existingQuiz.setDescription(quiz.getDescription());
-        existingQuiz.setStatus(quiz.getStatus());
+    @Override
+    public QuizResponseDTO updateQuiz(Long id, QuizRequestDTO request) {
+        Quiz existingQuiz = quizRepository.findById(id)
+                .orElseThrow(() -> new QuizNotFoundException(id));
 
-        return quizRepository.save(existingQuiz);
+        User owner = userRepository.findById(request.ownerId())
+                .orElseThrow(() -> new RuntimeException(
+                        "User not found: " + request.ownerId()
+                ));
+
+        existingQuiz.setOwner(owner);
+        existingQuiz.setTitle(request.title());
+        existingQuiz.setDescription(request.description());
+        existingQuiz.setStatus(request.status());
+
+        Quiz updatedQuiz = quizRepository.save(existingQuiz);
+
+        return quizMapper.toResponseDTO(updatedQuiz);
     }
 
     @Override
     public void deleteQuiz(Long id) {
-        Quiz existingQuiz = getQuizById(id);
+        Quiz existingQuiz = quizRepository.findById(id)
+                .orElseThrow(() -> new QuizNotFoundException(id));
+
         quizRepository.delete(existingQuiz);
     }
 }

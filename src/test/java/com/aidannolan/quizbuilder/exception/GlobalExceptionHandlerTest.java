@@ -28,4 +28,22 @@ public class GlobalExceptionHandlerTest {
         assertThat(result.getDetail())
                 .isEqualTo("Quiz not found: 999");
     }
+
+    @Test
+    void shouldHandleUserNotFoundException() {
+        UserNotFoundException exception =
+                new UserNotFoundException(999L);
+
+        ProblemDetail result =
+                handler.handleUserNotFound(exception);
+
+        assertThat(result.getStatus())
+                .isEqualTo(HttpStatus.NOT_FOUND.value());
+
+        assertThat(result.getTitle())
+            .isEqualTo("User Not Found");
+
+        assertThat(result.getDetail())
+                .isEqualTo("User not found: 999");
+    }
 }

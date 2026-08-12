@@ -1,17 +1,18 @@
 package com.aidannolan.quizbuilder.service;
 
-import com.aidannolan.quizbuilder.entity.Quiz;
+import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
+import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;
 
 import java.util.List;
 
 public interface QuizService {
-    Quiz createQuiz(Quiz quiz);
+    QuizResponseDTO createQuiz(QuizRequestDTO quiz);
 
-    Quiz getQuizById(Long id);
+    QuizResponseDTO getQuizById(Long id);
 
-    List<Quiz> getQuizzesByOwnerId(Long ownerId);
+    List<QuizResponseDTO> getQuizzesByOwnerId(Long ownerId);
 
-    Quiz updateQuiz(Long id, Quiz quiz);
+    QuizResponseDTO updateQuiz(Long id, QuizRequestDTO quiz);
 
     void deleteQuiz(Long id);
 }
