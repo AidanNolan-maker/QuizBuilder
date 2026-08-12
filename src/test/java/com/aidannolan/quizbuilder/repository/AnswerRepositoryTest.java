@@ -50,7 +50,7 @@ public class AnswerRepositoryTest {
         question.setQuestionText(
                 "Which keyword is used to inherit from a class?"
         );
-        question.setQuestionType(QuestionType.MULTIPLE_CHOICE);
+        question.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
         question.setPosition(1);
 
         Question savedQuestion = questionRepository.saveAndFlush(question);
@@ -96,7 +96,7 @@ public class AnswerRepositoryTest {
         question.setQuestionText(
                 "Which keyword is used to inherit from a class?"
         );
-        question.setQuestionType(QuestionType.MULTIPLE_CHOICE);
+        question.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
         question.setPosition(1);
 
         Question savedQuestion = questionRepository.saveAndFlush(question);
@@ -156,7 +156,7 @@ public class AnswerRepositoryTest {
         question.setQuestionText(
                 "Which keyword is used to inherit from a class?"
         );
-        question.setQuestionType(QuestionType.MULTIPLE_CHOICE);
+        question.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
         question.setPosition(1);
 
         Question savedQuestion = questionRepository.saveAndFlush(question);

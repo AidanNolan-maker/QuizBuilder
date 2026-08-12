@@ -44,7 +44,7 @@ public class QuestionRepositoryTest {
         Question question = new Question();
         question.setQuiz(savedQuiz);
         question.setQuestionText("Which keyword is used to inherit from a class?");
-        question.setQuestionType(QuestionType.MULTIPLE_CHOICE);
+        question.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
         question.setPosition(1);
 
         Question savedQuestion = questionRepository.saveAndFlush(question);
@@ -55,7 +55,7 @@ public class QuestionRepositoryTest {
         assertThat(savedQuestion.getQuestionText())
                 .isEqualTo("Which keyword is used to inherit from a class?");
         assertThat(savedQuestion.getQuestionType())
-                .isEqualTo(QuestionType.MULTIPLE_CHOICE);
+                .isEqualTo(QuestionType.MULTIPLE_CHOICE_SINGLE);
         assertThat(savedQuestion.getPosition()).isEqualTo(1);
         assertThat(savedQuestion.getCreatedAt()).isNotNull();
         assertThat(savedQuestion.getUpdatedAt()).isNotNull();
@@ -81,19 +81,19 @@ public class QuestionRepositoryTest {
         Question firstQuestion = new Question();
         firstQuestion.setQuiz(savedQuiz);
         firstQuestion.setQuestionText("First question");
-        firstQuestion.setQuestionType(QuestionType.MULTIPLE_CHOICE);
+        firstQuestion.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
         firstQuestion.setPosition(1);
 
         Question secondQuestion = new Question();
         secondQuestion.setQuiz(savedQuiz);
         secondQuestion.setQuestionText("Second question");
-        secondQuestion.setQuestionType(QuestionType.MULTIPLE_CHOICE);
+        secondQuestion.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
         secondQuestion.setPosition(2);
 
         Question thirdQuestion = new Question();
         thirdQuestion.setQuiz(savedQuiz);
         thirdQuestion.setQuestionText("Third question");
-        thirdQuestion.setQuestionType(QuestionType.MULTIPLE_CHOICE);
+        thirdQuestion.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
         thirdQuestion.setPosition(3);
 
         questionRepository.saveAndFlush(thirdQuestion);
