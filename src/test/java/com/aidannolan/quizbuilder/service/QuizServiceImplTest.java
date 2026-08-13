@@ -2,6 +2,7 @@ package com.aidannolan.quizbuilder.service;
 
 import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
 import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;
+import com.aidannolan.quizbuilder.dto.quiz.QuizUpdateRequestDTO;
 import com.aidannolan.quizbuilder.entity.Quiz;
 import com.aidannolan.quizbuilder.entity.QuizStatus;
 import com.aidannolan.quizbuilder.entity.User;
@@ -178,6 +179,91 @@ public class QuizServiceImplTest {
 
         verify(userRepository).findById(ownerId);
         verifyNoInteractions(quizRepository);
+        verifyNoInteractions(quizMapper);
+    }
+
+    @Test
+    void shouldUpdateQuiz() {
+        Long quizId = 1L;
+
+        User owner = new User();
+        owner.setId(10L);
+
+        Quiz existingQuiz = new Quiz();
+        existingQuiz.setId(quizId);
+        existingQuiz.setOwner(owner);
+        existingQuiz.setTitle("Java Fundamentals");
+        existingQuiz.setDescription("Original description");
+        existingQuiz.setStatus(QuizStatus.DRAFT);
+
+        QuizUpdateRequestDTO request = new QuizUpdateRequestDTO(
+                "Advanced Java Fundamentals",
+                "Updated description",
+                QuizStatus.PUBLISHED
+        );
+
+        QuizResponseDTO response = new QuizResponseDTO(
+                quizId,
+                10L,
+                "Advanced Java Fundamentals",
+                "Updated description",
+                QuizStatus.PUBLISHED,
+                null,
+                null
+        );
+
+        when(quizRepository.findById(quizId))
+                .thenReturn(Optional.of(existingQuiz));
+
+        when(quizRepository.save(existingQuiz))
+                .thenReturn(existingQuiz);
+
+        when(quizMapper.toResponseDTO(existingQuiz))
+                .thenReturn(response);
+
+        QuizResponseDTO result =
+                    quizService.updateQuiz(quizId, request);
+
+        assertThat(result).isEqualTo(response);
+
+        assertThat(existingQuiz.getTitle())
+                .isEqualTo("Advanced Java Fundamentals");
+
+        assertThat(existingQuiz.getDescription())
+                .isEqualTo("Updated description");
+
+        assertThat(existingQuiz.getStatus())
+                .isEqualTo(QuizStatus.PUBLISHED);
+
+        assertThat(existingQuiz.getOwner())
+                .isSameAs(owner);
+
+        verify(quizRepository).findById(quizId);
+        verify(quizRepository).save(existingQuiz);
+        verify(quizMapper).toResponseDTO(existingQuiz);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenQuizToUpdateDoesNotExist() {
+        Long quizId = 999L;
+
+        QuizUpdateRequestDTO request = new QuizUpdateRequestDTO(
+                "Updated Quiz",
+                "Updated description",
+                QuizStatus.PUBLISHED
+        );
+
+        when(quizRepository.findById(quizId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> quizService.updateQuiz(quizId, request)
+        )
+                .isInstanceOf(QuizNotFoundException.class)
+                .hasMessage("Quiz not found: 999");
+
+        verify(quizRepository).findById(quizId);
+        verify(quizRepository, never()).save(any());
         verifyNoInteractions(quizMapper);
     }
 }

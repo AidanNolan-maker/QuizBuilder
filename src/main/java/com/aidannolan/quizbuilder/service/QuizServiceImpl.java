@@ -2,6 +2,7 @@ package com.aidannolan.quizbuilder.service;
 
 import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
 import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;
+import com.aidannolan.quizbuilder.dto.quiz.QuizUpdateRequestDTO;
 import com.aidannolan.quizbuilder.entity.Quiz;
 import com.aidannolan.quizbuilder.entity.User;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
@@ -59,21 +60,15 @@ public class QuizServiceImpl implements QuizService {
     }
 
     @Override
-    public QuizResponseDTO updateQuiz(Long id, QuizRequestDTO request) {
-        Quiz existingQuiz = quizRepository.findById(id)
+    public QuizResponseDTO updateQuiz(Long id, QuizUpdateRequestDTO request) {
+        Quiz quiz = quizRepository.findById(id)
                 .orElseThrow(() -> new QuizNotFoundException(id));
 
-        User owner = userRepository.findById(request.ownerId())
-                .orElseThrow(() -> new RuntimeException(
-                        "User not found: " + request.ownerId()
-                ));
+        quiz.setTitle(request.title());
+        quiz.setDescription(request.description());
+        quiz.setStatus(request.status());
 
-        existingQuiz.setOwner(owner);
-        existingQuiz.setTitle(request.title());
-        existingQuiz.setDescription(request.description());
-        existingQuiz.setStatus(request.status());
-
-        Quiz updatedQuiz = quizRepository.save(existingQuiz);
+        Quiz updatedQuiz = quizRepository.save(quiz);
 
         return quizMapper.toResponseDTO(updatedQuiz);
     }

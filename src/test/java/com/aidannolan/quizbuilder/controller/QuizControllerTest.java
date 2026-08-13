@@ -2,7 +2,9 @@ package com.aidannolan.quizbuilder.controller;
 
 import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
 import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;
+import com.aidannolan.quizbuilder.dto.quiz.QuizUpdateRequestDTO;
 import com.aidannolan.quizbuilder.entity.QuizStatus;
+import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.service.QuizService;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -15,9 +17,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(QuizController.class)
@@ -84,5 +87,100 @@ public class QuizControllerTest {
                         .content(objectMapper.writeValueAsString(request))
                 )
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldUpdateQuiz() throws Exception {
+        QuizUpdateRequestDTO request = new QuizUpdateRequestDTO(
+                "Advanced Java Fundamentals",
+                "An advanced Java quiz.",
+                QuizStatus.PUBLISHED
+        );
+
+        QuizResponseDTO response = new QuizResponseDTO(
+                1L,
+                1L,
+                "Advanced Java Fundamentals",
+                "An advanced Java quiz.",
+                QuizStatus.PUBLISHED,
+                null,
+                null
+        );
+
+        when(quizService.updateQuiz(
+                eq(1L),
+                any(QuizUpdateRequestDTO.class)
+        )).thenReturn(response);
+
+        mockMvc.perform(
+                    put("/api/quizzes/1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                        "title": "Advanced Java Fundamentals",
+                                        "description": "An advanced Java quiz.",
+                                        "status": "PUBLISHED"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.ownerId").value(1))
+                .andExpect(jsonPath("$.title")
+                        .value("Advanced Java Fundamentals"))
+                .andExpect(jsonPath("$.description")
+                        .value("An advanced Java quiz."))
+                .andExpect(jsonPath("$.status")
+                        .value("PUBLISHED"));
+
+        verify(quizService).updateQuiz(
+                eq(1L),
+                any(QuizUpdateRequestDTO.class)
+        );
+    }
+
+    @Test
+    void shouldRejectQuizWithBlankTitleWhenUpdating() throws Exception {
+        mockMvc.perform(
+                    put("/api/quizzes/1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                        "title": "",
+                                        "description": "An updated quiz.",
+                                        "status": "PUBLISHED"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(quizService);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingNonexistentQuiz() throws Exception {
+        when(quizService.updateQuiz(
+                eq(999L),
+                any(QuizUpdateRequestDTO.class)
+        )).thenThrow(new QuizNotFoundException(999L));
+
+        mockMvc.perform(
+                    put("/api/quizzes/999")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                        "title": "Updated Quiz",
+                                        "description": "Updated description.",
+                                        "status": "PUBLISHED"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title")
+                        .value("Quiz Not Found"))
+                .andExpect(jsonPath("$.status")
+                        .value(404))
+                .andExpect(jsonPath("$.detail")
+                        .value("Quiz not found: 999"));
     }
 }

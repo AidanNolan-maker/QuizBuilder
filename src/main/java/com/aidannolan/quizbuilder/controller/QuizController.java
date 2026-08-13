@@ -2,6 +2,7 @@ package com.aidannolan.quizbuilder.controller;
 
 import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
 import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;
+import com.aidannolan.quizbuilder.dto.quiz.QuizUpdateRequestDTO;
 import com.aidannolan.quizbuilder.service.QuizService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,14 @@ public class QuizController {
     @GetMapping("/{id}")
     public QuizResponseDTO getQuizById(@PathVariable Long id) {
         return quizService.getQuizById(id);
+    }
+
+    @PutMapping("/{id}")
+    public QuizResponseDTO updateQuiz(
+            @PathVariable Long id,
+            @Valid @RequestBody QuizUpdateRequestDTO request
+    ) {
+        return quizService.updateQuiz(id, request);
     }
 
 }

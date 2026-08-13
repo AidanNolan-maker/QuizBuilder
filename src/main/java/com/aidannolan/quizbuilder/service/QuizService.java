@@ -2,6 +2,7 @@ package com.aidannolan.quizbuilder.service;
 
 import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
 import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;
+import com.aidannolan.quizbuilder.dto.quiz.QuizUpdateRequestDTO;
 
 import java.util.List;
 
@@ -12,7 +13,7 @@ public interface QuizService {
 
     List<QuizResponseDTO> getQuizzesByOwnerId(Long ownerId);
 
-    QuizResponseDTO updateQuiz(Long id, QuizRequestDTO quiz);
-
     void deleteQuiz(Long id);
+
+    QuizResponseDTO updateQuiz(Long id, QuizUpdateRequestDTO request);
 }
