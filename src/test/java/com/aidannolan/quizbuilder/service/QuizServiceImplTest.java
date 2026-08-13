@@ -266,4 +266,37 @@ public class QuizServiceImplTest {
         verify(quizRepository, never()).save(any());
         verifyNoInteractions(quizMapper);
     }
+
+    @Test
+    void shouldDeleteQuiz() {
+        Long quizId = 1L;
+
+        Quiz quiz = new Quiz();
+        quiz.setId(quizId);
+
+        when(quizRepository.findById(quizId))
+                .thenReturn(Optional.of(quiz));
+
+        quizService.deleteQuiz(quizId);
+
+        verify(quizRepository).findById(quizId);
+        verify(quizRepository).delete(quiz);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDeletingNonexistentQuiz() {
+        Long quizId = 999L;
+
+        when(quizRepository.findById(quizId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> quizService.deleteQuiz(quizId)
+        )
+                .isInstanceOf(QuizNotFoundException.class)
+                .hasMessage("Quiz not found: 999");
+
+        verify(quizRepository).findById(quizId);
+        verify(quizRepository, never()).delete(any());
+    }
 }

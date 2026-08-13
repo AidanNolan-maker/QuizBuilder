@@ -36,4 +36,10 @@ public class QuizController {
         return quizService.updateQuiz(id, request);
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteQuiz(@PathVariable Long id) {
+        quizService.deleteQuiz(id);
+    }
+
 }

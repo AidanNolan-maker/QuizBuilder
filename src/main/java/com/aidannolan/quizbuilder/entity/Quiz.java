@@ -34,6 +34,10 @@ public class Quiz extends BaseEntity {
     @Column(nullable = false, length = 20)
     private QuizStatus status;
 
-    @OneToMany(mappedBy = "quiz")
+    @OneToMany(
+            mappedBy = "quiz",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<Question> questions = new ArrayList<>();
 }

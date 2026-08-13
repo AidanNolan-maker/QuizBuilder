@@ -34,6 +34,10 @@ public class Question extends BaseEntity {
     @Column(nullable = false)
     private Integer position;
 
-    @OneToMany(mappedBy = "question")
+    @OneToMany(
+            mappedBy = "question",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<Answer> answers = new ArrayList<>();
 }

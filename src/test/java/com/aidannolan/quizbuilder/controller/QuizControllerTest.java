@@ -19,8 +19,7 @@ import java.time.LocalDateTime;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(QuizController.class)
@@ -174,6 +173,34 @@ public class QuizControllerTest {
                                         "status": "PUBLISHED"
                                     }
                                     """)
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title")
+                        .value("Quiz Not Found"))
+                .andExpect(jsonPath("$.status")
+                        .value(404))
+                .andExpect(jsonPath("$.detail")
+                        .value("Quiz not found: 999"));
+    }
+
+    @Test
+    void shouldDeleteQuiz() throws Exception {
+        mockMvc.perform(
+                    delete("/api/quizzes/1")
+                )
+                .andExpect(status().isNoContent());
+
+        verify(quizService).deleteQuiz(1L);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeletingNonexistentQuiz() throws Exception {
+        doThrow(new QuizNotFoundException(999L))
+                .when(quizService)
+                .deleteQuiz(999L);
+
+        mockMvc.perform(
+                    delete("/api/quizzes/999")
                 )
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title")
