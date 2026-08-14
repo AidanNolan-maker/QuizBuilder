@@ -9,6 +9,7 @@ import com.aidannolan.quizbuilder.entity.QuestionType;
 import com.aidannolan.quizbuilder.entity.Quiz;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -136,5 +137,70 @@ public class QuestionMapperTest {
 
         assertThat(result.answers().get(1).correct())
                 .isFalse();
+    }
+
+    @Test
+    void shouldUpdateEntityFromRequest() {
+        Quiz quiz = new Quiz();
+        quiz.setId(5L);
+
+        Question question = new Question();
+        question.setId(10L);
+        question.setQuiz(quiz);
+        question.setQuestionText("Old question");
+        question.setQuestionType(
+                QuestionType.MULTIPLE_CHOICE_SINGLE
+        );
+        question.setPosition(1);
+
+        Answer existingAnswer = new Answer();
+        existingAnswer.setId(100L);
+        existingAnswer.setQuestion(question);
+        existingAnswer.setAnswerText("Old answer");
+        existingAnswer.setCorrect(true);
+        existingAnswer.setPosition(1);
+
+        question.setAnswers(
+                new ArrayList<>(List.of(existingAnswer))
+        );
+
+        QuestionRequestDTO dto = new QuestionRequestDTO(
+                "Updated question",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                2,
+                List.of(
+                        new AnswerRequestDTO(
+                                "New answer",
+                                true,
+                                1
+                        )
+                )
+        );
+
+        questionMapper.updateEntity(question, dto);
+
+        assertThat(question.getId())
+                .isEqualTo(10L);
+
+        assertThat(question.getQuiz())
+                .isSameAs(quiz);
+
+        assertThat(question.getQuestionText())
+                .isEqualTo("Updated question");
+
+        assertThat(question.getQuestionType())
+                .isEqualTo(QuestionType.MULTIPLE_CHOICE_SINGLE);
+
+        assertThat(question.getPosition())
+                .isEqualTo(2);
+
+        assertThat(question.getAnswers())
+                .hasSize(1);
+
+        assertThat(question.getAnswers().get(0))
+                .isSameAs(existingAnswer);
+
+        assertThat(question.getAnswers().get(0).getAnswerText())
+                .isEqualTo("Old answer");
     }
 }

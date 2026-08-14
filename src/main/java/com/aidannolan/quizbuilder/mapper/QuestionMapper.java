@@ -48,4 +48,13 @@ public class QuestionMapper {
                 question.getUpdatedAt()
         );
     }
+
+    public void updateEntity(
+            Question question,
+            QuestionRequestDTO dto
+    ) {
+        question.setQuestionText(dto.questionText());
+        question.setQuestionType(dto.questionType());
+        question.setPosition(dto.position());
+    }
 }

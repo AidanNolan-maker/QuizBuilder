@@ -10,6 +10,7 @@ import com.aidannolan.quizbuilder.entity.Quiz;
 import com.aidannolan.quizbuilder.exception.QuestionNotFoundException;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.mapper.QuestionMapper;
+import com.aidannolan.quizbuilder.mapper.AnswerMapper;
 import com.aidannolan.quizbuilder.repository.QuestionRepository;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +39,9 @@ public class QuestionServiceImplTest {
 
     @Mock
     private QuestionMapper questionMapper;
+
+    @Mock
+    private AnswerMapper answerMapper;
 
     @InjectMocks
     private QuestionServiceImpl questionService;
@@ -360,6 +365,191 @@ public class QuestionServiceImplTest {
                         questionId,
                         requestedQuizId
                 );
+
+        verifyNoInteractions(questionMapper);
+    }
+
+    @Test
+    void shouldUpdateQuestionAndReplaceAnswers() {
+        Long quizId = 1L;
+        Long questionId = 10L;
+
+        Question existingQuestion = new Question();
+        existingQuestion.setId(questionId);
+        existingQuestion.setQuestionText("Old question");
+        existingQuestion.setQuestionType(
+                QuestionType.MULTIPLE_CHOICE_SINGLE
+        );
+        existingQuestion.setPosition(1);
+
+        Answer oldAnswer1 = new Answer();
+        oldAnswer1.setId(100L);
+        oldAnswer1.setQuestion(existingQuestion);
+        oldAnswer1.setAnswerText("Old answer 1");
+        oldAnswer1.setCorrect(true);
+        oldAnswer1.setPosition(1);
+
+        Answer oldAnswer2 = new Answer();
+        oldAnswer2.setId(101L);
+        oldAnswer2.setQuestion(existingQuestion);
+        oldAnswer2.setAnswerText("Old answer 2");
+        oldAnswer2.setCorrect(false);
+        oldAnswer2.setPosition(2);
+
+        existingQuestion.setAnswers(
+                new ArrayList<>(List.of(oldAnswer1, oldAnswer2))
+        );
+
+        QuestionRequestDTO request = new QuestionRequestDTO(
+                "Updated question",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                2,
+                List.of(
+                        new AnswerRequestDTO(
+                                "New correct answer",
+                                true,
+                                1
+                        ),
+                        new AnswerRequestDTO(
+                                "New incorrect answer",
+                                false,
+                                2
+                        )
+                )
+        );
+
+        Question updatedQuestion = new Question();
+        updatedQuestion.setId(questionId);
+        updatedQuestion.setQuiz(quiz);
+        updatedQuestion.setQuestionText("Updated question");
+        updatedQuestion.setQuestionType(
+                QuestionType.MULTIPLE_CHOICE_SINGLE
+        );
+        updatedQuestion.setPosition(2);
+
+        Answer newAnswer1 = new Answer();
+        newAnswer1.setAnswerText("New correct answer");
+        newAnswer1.setCorrect(true);
+        newAnswer1.setPosition(1);
+
+        Answer newAnswer2 = new Answer();
+        newAnswer2.setAnswerText("New incorrect answer");
+        newAnswer2.setCorrect(false);
+        newAnswer2.setPosition(2);
+
+        QuestionResponseDTO response = new QuestionResponseDTO(
+                questionId,
+                quizId,
+                "Updated question",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                2,
+                List.of(),
+                null,
+                null
+        );
+
+        when(questionRepository.findByIdAndQuizId(
+                questionId,
+                quizId
+        )).thenReturn(Optional.of(existingQuestion));
+
+        doAnswer(invocation -> {
+            Question question = invocation.getArgument(0);
+            QuestionRequestDTO dto = invocation.getArgument(1);
+
+            question.setQuestionText(dto.questionText());
+            question.setQuestionType(dto.questionType());
+            question.setPosition(dto.position());
+
+            return null;
+        }).when(questionMapper)
+                        .updateEntity(existingQuestion, request);
+
+        when(questionRepository.save(existingQuestion))
+                .thenReturn(existingQuestion);
+
+        when(questionMapper.toResponseDTO(existingQuestion))
+                .thenReturn(response);
+
+        when(answerMapper.toEntity(request.answers().get(0)))
+                .thenReturn(newAnswer1);
+
+        when(answerMapper.toEntity(request.answers().get(1)))
+                .thenReturn(newAnswer2);
+
+        questionService.updateQuestion(
+            quizId,
+            questionId,
+            request
+        );
+
+        verify(questionMapper)
+                .updateEntity(existingQuestion, request);
+
+        verify(questionRepository)
+                .save(existingQuestion);
+
+        verify(questionMapper)
+                .toResponseDTO(existingQuestion);
+
+        assertThat(existingQuestion.getQuestionText())
+            .isEqualTo("Updated question");
+
+        assertThat(existingQuestion.getPosition())
+            .isEqualTo(2);
+
+        assertThat(existingQuestion.getAnswers())
+            .hasSize(2);
+
+        assertThat(existingQuestion.getAnswers())
+            .extracting(Answer::getAnswerText)
+            .containsExactly(
+                "New correct answer",
+                "New incorrect answer"
+            );
+
+        assertThat(existingQuestion.getAnswers())
+            .allSatisfy(answer ->
+                assertThat(answer.getQuestion())
+                    .isSameAs(existingQuestion)
+            );
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingQuestionThatDoesNotExist() {
+        Long quizId = 1L;
+        Long questionId = 999L;
+
+        QuestionRequestDTO request = new QuestionRequestDTO(
+                "Updated question",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                1,
+                List.of(
+                        new AnswerRequestDTO(
+                                "Answer",
+                                true,
+                                1
+                        )
+                )
+        );
+
+        when(questionRepository.findByIdAndQuizId(
+                questionId,
+                quizId
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.updateQuestion(
+                        quizId,
+                        questionId,
+                        request
+                )
+        )
+                .isInstanceOf(QuestionNotFoundException.class)
+                .hasMessage("Question not found: " + questionId);
+
+        verify(questionRepository)
+                .findByIdAndQuizId(questionId, quizId);
 
         verifyNoInteractions(questionMapper);
     }

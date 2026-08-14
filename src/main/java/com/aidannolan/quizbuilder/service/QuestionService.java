@@ -14,4 +14,10 @@ public interface QuestionService {
     List<QuestionResponseDTO> getQuestionsByQuizId(Long quizId);
 
     QuestionResponseDTO getQuestionById(Long quizId, Long questionId);
+
+    QuestionResponseDTO updateQuestion(
+            Long quizId,
+            Long questionId,
+            QuestionRequestDTO request
+    );
 }

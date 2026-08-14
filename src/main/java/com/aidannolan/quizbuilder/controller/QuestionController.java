@@ -37,4 +37,17 @@ public class QuestionController {
     ) {
         return questionService.getQuestionById(quizId, questionId);
     }
+
+    @PutMapping("/{questionId}")
+    public QuestionResponseDTO updateQuestion(
+            @PathVariable Long quizId,
+            @PathVariable Long questionId,
+            @Valid @RequestBody QuestionRequestDTO request
+    ) {
+        return questionService.updateQuestion(
+                quizId,
+                questionId,
+                request
+        );
+    }
 }

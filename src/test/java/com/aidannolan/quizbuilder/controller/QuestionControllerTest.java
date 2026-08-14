@@ -20,10 +20,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
 @WebMvcTest(QuestionController.class)
 public class QuestionControllerTest {
@@ -281,6 +281,136 @@ public class QuestionControllerTest {
         mockMvc.perform(
                     get("/api/quizzes/1/questions/10")
                 )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title")
+                        .value("Question Not Found"))
+                .andExpect(jsonPath("$.status")
+                        .value(404))
+                .andExpect(jsonPath("$.detail")
+                        .value("Question not found: 10"));
+    }
+
+    @Test
+    void shouldUpdateQuestion() throws Exception {
+        QuestionResponseDTO response = new QuestionResponseDTO(
+                10L,
+                1L,
+                "Updated question",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                2,
+                List.of(),
+                null,
+                null
+        );
+
+        when(questionService.updateQuestion(
+                eq(1L),
+                eq(10L),
+                any(QuestionRequestDTO.class)
+        )).thenReturn(response);
+
+        mockMvc.perform(
+                    put("/api/quizzes/1/questions/10")
+                            .contentType("application/json")
+                            .content("""
+                                    {
+                                        "questionText": "Updated question",
+                                        "questionType": "MULTIPLE_CHOICE_SINGLE",
+                                        "position": 2,
+                                        "answers": [
+                                            {
+                                                "answerText": "extends",
+                                                "correct": true,
+                                                "position": 1
+                                            },
+                                            {
+                                                "answerText": "implements",
+                                                "correct": false,
+                                                "position": 2
+                                            }
+                                        ]
+                                    }
+                                    """)
+                )
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.quizId").value(1))
+                .andExpect(jsonPath("$.questionText")
+                        .value("Updated question"))
+                .andExpect(jsonPath("$.questionType")
+                        .value("MULTIPLE_CHOICE_SINGLE"))
+                .andExpect(jsonPath("$.position").value(2));
+
+        verify(questionService).updateQuestion(
+                eq(1L),
+                eq(10L),
+                any(QuestionRequestDTO.class)
+        );
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingNonexistentQuestion() throws Exception {
+        when(questionService.updateQuestion(
+                eq(1L),
+                eq(999L),
+                any(QuestionRequestDTO.class)
+        )).thenThrow(new QuestionNotFoundException(999L));
+
+        mockMvc.perform(
+                    put("/api/quizzes/1/questions/999")
+                            .contentType("application/json")
+                            .content("""
+                                    {
+                                        "questionText": "Updated question",
+                                        "questionType": "MULTIPLE_CHOICE_SINGLE",
+                                        "position": 1,
+                                        "answers": [
+                                            {
+                                                "answerText": "extends",
+                                                "correct": true,
+                                                "position": 1
+                                            }
+                                        ]
+                                    }
+                                    """)
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title")
+                        .value("Question Not Found"))
+                .andExpect(jsonPath("$.status")
+                        .value(404))
+                .andExpect(jsonPath("$.detail")
+                        .value("Question not found: 999"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingQuestionFromAnotherQuiz() throws Exception {
+        when(questionService.updateQuestion(
+                eq(1L),
+                eq(10L),
+                any(QuestionRequestDTO.class)
+        )).thenThrow(new QuestionNotFoundException(10L));
+
+        mockMvc.perform(
+                    put("/api/quizzes/1/questions/10")
+                            .contentType("application/json")
+                            .content("""
+                                    {
+                                        "questionText": "Updated question",
+                                        "questionType": "MULTIPLE_CHOICE_SINGLE",
+                                        "position": 1,
+                                        "answers": [
+                                            {
+                                                "answerText": "extends",
+                                                "correct": true,
+                                                "position": 1
+                                            }
+                                        ]
+                                    }
+                                    """)
+                )
+                .andDo(print())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title")
                         .value("Question Not Found"))

@@ -8,6 +8,7 @@ import com.aidannolan.quizbuilder.entity.Quiz;
 import com.aidannolan.quizbuilder.exception.QuestionNotFoundException;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.mapper.QuestionMapper;
+import com.aidannolan.quizbuilder.mapper.AnswerMapper;
 import com.aidannolan.quizbuilder.repository.QuestionRepository;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
 import com.aidannolan.quizbuilder.service.QuestionService;
@@ -23,6 +24,7 @@ public class QuestionServiceImpl implements QuestionService {
     private final QuestionRepository questionRepository;
     private final QuizRepository quizRepository;
     private final QuestionMapper questionMapper;
+    private final AnswerMapper answerMapper;
 
     @Override
     @Transactional
@@ -66,5 +68,38 @@ public class QuestionServiceImpl implements QuestionService {
                 .orElseThrow(() -> new QuestionNotFoundException(questionId));
 
         return questionMapper.toResponseDTO(question);
+    }
+
+    @Override
+    @Transactional
+    public QuestionResponseDTO updateQuestion(
+            Long quizId,
+            Long questionId,
+            QuestionRequestDTO request
+    ) {
+        Question question = questionRepository
+                .findByIdAndQuizId(questionId, quizId)
+                .orElseThrow(
+                        () -> new QuestionNotFoundException(questionId)
+                );
+
+        questionMapper.updateEntity(question, request);
+
+        question.getAnswers().clear();
+
+        List<Answer> newAnswers = request.answers()
+                .stream()
+                .map(answerMapper::toEntity)
+                .toList();
+
+        for (Answer answer : newAnswers) {
+            answer.setQuestion(question);
+        }
+
+        question.getAnswers().addAll(newAnswers);
+
+        Question savedQuestion = questionRepository.save(question);
+
+        return questionMapper.toResponseDTO(savedQuestion);
     }
 }
