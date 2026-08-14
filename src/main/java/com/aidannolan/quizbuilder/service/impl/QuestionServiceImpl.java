@@ -102,4 +102,16 @@ public class QuestionServiceImpl implements QuestionService {
 
         return questionMapper.toResponseDTO(savedQuestion);
     }
+
+    @Override
+    @Transactional
+    public void deleteQuestion(Long quizId, Long questionId) {
+        Question question = questionRepository
+                .findByIdAndQuizId(questionId, quizId)
+                .orElseThrow(
+                        () -> new QuestionNotFoundException(questionId)
+                );
+
+        questionRepository.delete(question);
+    }
 }

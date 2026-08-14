@@ -5,6 +5,7 @@ import com.aidannolan.quizbuilder.dto.question.QuestionResponseDTO;
 import com.aidannolan.quizbuilder.service.QuestionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -49,5 +50,14 @@ public class QuestionController {
                 questionId,
                 request
         );
+    }
+
+    @DeleteMapping("/{questionId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteQuestion(
+            @PathVariable Long quizId,
+            @PathVariable Long questionId
+    ) {
+        questionService.deleteQuestion(quizId, questionId);
     }
 }

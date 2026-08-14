@@ -20,4 +20,6 @@ public interface QuestionService {
             Long questionId,
             QuestionRequestDTO request
     );
+
+    void deleteQuestion(Long quizId, Long questionId);
 }

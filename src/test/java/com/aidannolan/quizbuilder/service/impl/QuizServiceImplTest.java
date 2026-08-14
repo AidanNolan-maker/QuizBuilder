@@ -3,14 +3,17 @@ package com.aidannolan.quizbuilder.service.impl;
 import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
 import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;
 import com.aidannolan.quizbuilder.dto.quiz.QuizUpdateRequestDTO;
+import com.aidannolan.quizbuilder.entity.Question;
 import com.aidannolan.quizbuilder.entity.Quiz;
 import com.aidannolan.quizbuilder.entity.QuizStatus;
 import com.aidannolan.quizbuilder.entity.User;
+import com.aidannolan.quizbuilder.exception.QuestionNotFoundException;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.exception.UserNotFoundException;
 import com.aidannolan.quizbuilder.mapper.QuizMapper;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
 import com.aidannolan.quizbuilder.repository.UserRepository;
+import com.aidannolan.quizbuilder.repository.QuestionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,10 +36,16 @@ public class QuizServiceImplTest {
     private UserRepository userRepository;
 
     @Mock
+    private QuestionRepository questionRepository;
+
+    @Mock
     private QuizMapper quizMapper;
 
     @InjectMocks
     private QuizServiceImpl quizService;
+
+    @InjectMocks
+    private QuestionServiceImpl questionService;
 
     @Test
     void shouldCreateQuiz() {
@@ -298,5 +307,82 @@ public class QuizServiceImplTest {
 
         verify(quizRepository).findById(quizId);
         verify(quizRepository, never()).delete(any());
+    }
+
+    @Test
+    void shouldDeleteQuestion() {
+        Long quizId = 1L;
+        Long questionId = 10L;
+
+        Quiz quiz = new Quiz();
+        quiz.setId(quizId);
+
+        Question question = new Question();
+        question.setId(questionId);
+        question.setQuiz(quiz);
+
+        when(questionRepository.findByIdAndQuizId(
+                questionId,
+                quizId
+        )).thenReturn(Optional.of(question));
+
+        questionService.deleteQuestion(quizId, questionId);
+
+        verify(questionRepository)
+                .findByIdAndQuizId(questionId, quizId);
+
+        verify(questionRepository).delete(question);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDeletingNonexistentQuestion() {
+        Long quizId = 1L;
+        Long questionId = 999L;
+
+        when(questionRepository.findByIdAndQuizId(
+                questionId,
+                quizId
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.deleteQuestion(
+                        quizId,
+                        questionId
+                )
+        )
+                .isInstanceOf(QuestionNotFoundException.class)
+                .hasMessage("Question not found: " + questionId);
+
+        verify(questionRepository)
+                .findByIdAndQuizId(questionId, quizId);
+
+        verify(questionRepository, never())
+                .delete(any(Question.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDeletingQuestionFromAnotherQuiz() {
+        Long requestedQuizId = 1L;
+        Long questionId = 10L;
+
+        when(questionRepository.findByIdAndQuizId(
+                questionId,
+                requestedQuizId
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.deleteQuestion(
+                        requestedQuizId,
+                        questionId
+                )
+        )
+                .isInstanceOf(QuestionNotFoundException.class)
+                .hasMessage("Question not found: " + questionId);
+
+        verify(questionRepository)
+                .findByIdAndQuizId(questionId, requestedQuizId);
+
+        verify(questionRepository, never())
+                .delete(any(Question.class));
     }
 }

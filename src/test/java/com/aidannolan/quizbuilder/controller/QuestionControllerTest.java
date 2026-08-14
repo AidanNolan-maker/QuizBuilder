@@ -17,9 +17,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -411,6 +409,56 @@ public class QuestionControllerTest {
                                     """)
                 )
                 .andDo(print())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title")
+                        .value("Question Not Found"))
+                .andExpect(jsonPath("$.status")
+                        .value(404))
+                .andExpect(jsonPath("$.detail")
+                        .value("Question not found: 10"));
+    }
+
+    @Test
+    void shouldDeleteQuestion() throws Exception {
+        doNothing().when(questionService)
+                .deleteQuestion(1L, 10L);
+
+        mockMvc.perform(
+                    delete("/api/quizzes/1/questions/10")
+                )
+                .andExpect(status().isNoContent());
+
+        verify(questionService)
+                .deleteQuestion(1L, 10L);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeletingNonexistentQuestion() throws Exception {
+        doThrow(new QuestionNotFoundException(999L))
+                .when(questionService)
+                .deleteQuestion(1L, 999L);
+
+        mockMvc.perform(
+                    delete("/api/quizzes/1/questions/999")
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title")
+                        .value("Question Not Found"))
+                .andExpect(jsonPath("$.status")
+                        .value(404))
+                .andExpect(jsonPath("$.detail")
+                        .value("Question not found: 999"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeletingQuestionFromAnotherQuiz() throws Exception {
+        doThrow(new QuestionNotFoundException(10L))
+                .when(questionService)
+                .deleteQuestion(1L, 10L);
+
+        mockMvc.perform(
+                    delete("/api/quizzes/1/questions/10")
+                )
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title")
                         .value("Question Not Found"))
