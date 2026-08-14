@@ -1,4 +1,4 @@
-package com.aidannolan.quizbuilder.service;
+package com.aidannolan.quizbuilder.service.impl;
 
 import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
 import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;

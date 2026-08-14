@@ -1,4 +1,4 @@
-package com.aidannolan.quizbuilder.service;
+package com.aidannolan.quizbuilder.service.impl;
 
 import com.aidannolan.quizbuilder.dto.quiz.QuizRequestDTO;
 import com.aidannolan.quizbuilder.dto.quiz.QuizResponseDTO;
@@ -10,6 +10,7 @@ import com.aidannolan.quizbuilder.exception.UserNotFoundException;
 import com.aidannolan.quizbuilder.mapper.QuizMapper;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
 import com.aidannolan.quizbuilder.repository.UserRepository;
+import com.aidannolan.quizbuilder.service.QuizService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
