@@ -4,6 +4,7 @@ import com.aidannolan.quizbuilder.dto.answer.AnswerRequestDTO;
 import com.aidannolan.quizbuilder.dto.question.QuestionRequestDTO;
 import com.aidannolan.quizbuilder.dto.question.QuestionResponseDTO;
 import com.aidannolan.quizbuilder.entity.QuestionType;
+import com.aidannolan.quizbuilder.exception.QuestionNotFoundException;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.service.QuestionService;
 import org.junit.jupiter.api.Test;
@@ -219,5 +220,73 @@ public class QuestionControllerTest {
 
         verify(questionService)
                 .getQuestionsByQuizId(1L);
+    }
+
+    @Test
+    void shouldGetQuestionById() throws Exception {
+        QuestionResponseDTO response = new QuestionResponseDTO(
+                10L,
+                1L,
+                "Which keyword is used to inherit from a class?",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                1,
+                List.of(),
+                null,
+                null
+        );
+
+        when(questionService.getQuestionById(1L, 10L))
+                .thenReturn(response);
+
+        mockMvc.perform(
+                    get("/api/quizzes/1/questions/10")
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.quizId").value(1))
+                .andExpect(jsonPath("$.questionText")
+                        .value(
+                                "Which keyword is used to inherit from a class?"
+                        ))
+                .andExpect(jsonPath("$.questionType")
+                        .value("MULTIPLE_CHOICE_SINGLE"))
+                .andExpect(jsonPath("$.position").value(1));
+
+        verify(questionService)
+                .getQuestionById(1L, 10L);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenQuestionDoesNotExist() throws Exception {
+        when(questionService.getQuestionById(1L, 999L))
+                .thenThrow(new QuestionNotFoundException(999L));
+
+        mockMvc.perform(
+                    get("/api/quizzes/1/questions/999")
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title")
+                        .value("Question Not Found"))
+                .andExpect(jsonPath("$.status")
+                        .value(404))
+                .andExpect(jsonPath("$.detail")
+                        .value("Question not found: 999"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenQuestionDoesNotBelongToQuiz() throws Exception {
+        when(questionService.getQuestionById(1L, 10L))
+                .thenThrow(new QuestionNotFoundException(10L));
+
+        mockMvc.perform(
+                    get("/api/quizzes/1/questions/10")
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title")
+                        .value("Question Not Found"))
+                .andExpect(jsonPath("$.status")
+                        .value(404))
+                .andExpect(jsonPath("$.detail")
+                        .value("Question not found: 10"));
     }
 }

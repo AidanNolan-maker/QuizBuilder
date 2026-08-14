@@ -32,4 +32,17 @@ public class GlobalExceptionHandler {
 
         return problemDetail;
     }
+
+    @ExceptionHandler(QuestionNotFoundException.class)
+    public ProblemDetail handleQuestionNotFound(QuestionNotFoundException exception) {
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.NOT_FOUND,
+                        exception.getMessage()
+                );
+
+        problemDetail.setTitle("Question Not Found");
+
+        return problemDetail;
+    }
 }

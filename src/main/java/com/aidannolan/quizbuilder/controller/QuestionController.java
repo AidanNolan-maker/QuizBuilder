@@ -29,4 +29,12 @@ public class QuestionController {
     ) {
         return questionService.getQuestionsByQuizId(quizId);
     }
+
+    @GetMapping("/{questionId}")
+    public QuestionResponseDTO getQuestionById(
+            @PathVariable Long quizId,
+            @PathVariable Long questionId
+    ) {
+        return questionService.getQuestionById(quizId, questionId);
+    }
 }

@@ -5,6 +5,7 @@ import com.aidannolan.quizbuilder.dto.question.QuestionResponseDTO;
 import com.aidannolan.quizbuilder.entity.Answer;
 import com.aidannolan.quizbuilder.entity.Question;
 import com.aidannolan.quizbuilder.entity.Quiz;
+import com.aidannolan.quizbuilder.exception.QuestionNotFoundException;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.mapper.QuestionMapper;
 import com.aidannolan.quizbuilder.repository.QuestionRepository;
@@ -56,5 +57,14 @@ public class QuestionServiceImpl implements QuestionService {
                 .stream()
                 .map(questionMapper::toResponseDTO)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public QuestionResponseDTO getQuestionById(Long quizId, Long questionId) {
+        Question question = questionRepository.findByIdAndQuizId(questionId, quizId)
+                .orElseThrow(() -> new QuestionNotFoundException(questionId));
+
+        return questionMapper.toResponseDTO(question);
     }
 }

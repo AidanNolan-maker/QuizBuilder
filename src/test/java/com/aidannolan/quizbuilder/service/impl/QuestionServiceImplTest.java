@@ -7,6 +7,7 @@ import com.aidannolan.quizbuilder.entity.Answer;
 import com.aidannolan.quizbuilder.entity.Question;
 import com.aidannolan.quizbuilder.entity.QuestionType;
 import com.aidannolan.quizbuilder.entity.Quiz;
+import com.aidannolan.quizbuilder.exception.QuestionNotFoundException;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.mapper.QuestionMapper;
 import com.aidannolan.quizbuilder.repository.QuestionRepository;
@@ -260,6 +261,106 @@ public class QuestionServiceImplTest {
                 .hasMessage("Quiz not found: 999");
 
         verifyNoInteractions(questionRepository);
+        verifyNoInteractions(questionMapper);
+    }
+
+    @Test
+    void shouldGetQuestionByIdWhenQuestionBelongsToQuiz() {
+        Long quizId = 1L;
+        Long questionId = 10L;
+
+        Question question = new Question();
+        question.setId(questionId);
+        question.setQuestionText(
+                "Which keyword is used to inherit from a class?"
+        );
+        question.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
+        question.setPosition(1);
+
+        QuestionResponseDTO response = new QuestionResponseDTO(
+                questionId,
+                quizId,
+                "Which keyword is used to inherit from a class?",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                1,
+                List.of(),
+                null,
+                null
+        );
+
+        when(questionRepository.findByIdAndQuizId(
+                questionId,
+                quizId
+        )).thenReturn(Optional.of(question));
+
+        when(questionMapper.toResponseDTO(question))
+                .thenReturn(response);
+
+        QuestionResponseDTO result =
+                questionService.getQuestionById(
+                        quizId,
+                        questionId
+                );
+
+        assertThat(result).isEqualTo(response);
+
+        verify(questionRepository)
+                .findByIdAndQuizId(questionId, quizId);
+
+        verify(questionMapper)
+                .toResponseDTO(question);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenQuestionDoesNotExist() {
+        Long quizId = 1L;
+        Long questionId = 10L;
+
+        when(questionRepository.findByIdAndQuizId(
+                questionId,
+                quizId
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.getQuestionById(
+                        quizId,
+                        questionId
+                )
+        )
+                .isInstanceOf(QuestionNotFoundException.class)
+                .hasMessage("Question not found: " + questionId);
+
+        verify(questionRepository)
+                .findByIdAndQuizId(questionId, quizId);
+
+        verifyNoInteractions(questionMapper);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenQuestionDoesNotBelongToQuiz() {
+        Long requestedQuizId = 1L;
+        Long questionId = 10L;
+
+        when(questionRepository.findByIdAndQuizId(
+                questionId,
+                requestedQuizId
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.getQuestionById(
+                        requestedQuizId,
+                        questionId
+                )
+        )
+                .isInstanceOf(QuestionNotFoundException.class)
+                .hasMessage("Question not found: " + questionId);
+
+        verify(questionRepository)
+                .findByIdAndQuizId(
+                        questionId,
+                        requestedQuizId
+                );
+
         verifyNoInteractions(questionMapper);
     }
 }
