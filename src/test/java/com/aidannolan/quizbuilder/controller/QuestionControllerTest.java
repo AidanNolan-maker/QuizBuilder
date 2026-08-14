@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -157,5 +158,66 @@ public class QuestionControllerTest {
                         .value(404))
                 .andExpect(jsonPath("$.detail")
                         .value("Quiz not found: 999"));
+    }
+
+    @Test
+    void shouldGetQuestionsByQuizId() throws Exception {
+        QuestionResponseDTO question1 = new QuestionResponseDTO(
+                10L,
+                1L,
+                "First question",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                1,
+                List.of(),
+                null,
+                null
+        );
+
+        QuestionResponseDTO question2 = new QuestionResponseDTO(
+                11L,
+                1L,
+                "Second question",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                2,
+                List.of(),
+                null,
+                null
+        );
+
+        when(questionService.getQuestionsByQuizId(1L))
+                .thenReturn(List.of(question1, question2));
+
+        mockMvc.perform(
+                    get("/api/quizzes/1/questions")
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(10))
+                .andExpect(jsonPath("$[0].quizId").value(1))
+                .andExpect(jsonPath("$[0].questionText")
+                        .value("First question"))
+                .andExpect(jsonPath("$[0].position").value(1))
+                .andExpect(jsonPath("$[1].id").value(11))
+                .andExpect(jsonPath("$.[1].questionText")
+                        .value("Second question"))
+                .andExpect(jsonPath("$[1].position").value(2));
+
+        verify(questionService)
+                .getQuestionsByQuizId(1L);
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenQuizHasNoQuestions() throws Exception {
+        when(questionService.getQuestionsByQuizId(1L))
+                .thenReturn(List.of());
+
+        mockMvc.perform(
+                    get("/api/quizzes/1/questions")
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        verify(questionService)
+                .getQuestionsByQuizId(1L);
     }
 }

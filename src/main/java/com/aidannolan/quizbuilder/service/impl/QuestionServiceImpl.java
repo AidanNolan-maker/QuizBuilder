@@ -14,6 +14,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class QuestionServiceImpl implements QuestionService {
@@ -41,5 +43,18 @@ public class QuestionServiceImpl implements QuestionService {
         Question savedQuestion = questionRepository.save(question);
 
         return questionMapper.toResponseDTO(savedQuestion);
+    }
+
+    @Override
+    @Transactional
+    public List<QuestionResponseDTO> getQuestionsByQuizId(Long quizId) {
+        quizRepository.findById(quizId)
+                .orElseThrow(() -> new QuizNotFoundException(quizId));
+
+        return questionRepository
+                .findByQuizIdOrderByPositionAsc(quizId)
+                .stream()
+                .map(questionMapper::toResponseDTO)
+                .toList();
     }
 }

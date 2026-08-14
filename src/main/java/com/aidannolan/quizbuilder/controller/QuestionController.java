@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/quizzes/{quizId}/questions")
 @RequiredArgsConstructor
@@ -19,5 +21,12 @@ public class QuestionController {
             @Valid @RequestBody QuestionRequestDTO request
     ) {
         return questionService.createQuestion(quizId, request);
+    }
+
+    @GetMapping
+    public List<QuestionResponseDTO> getQuestionsByQuizId(
+            @PathVariable Long quizId
+    ) {
+        return questionService.getQuestionsByQuizId(quizId);
     }
 }

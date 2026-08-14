@@ -13,6 +13,8 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.context.annotation.Import;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
@@ -114,5 +116,82 @@ public class QuestionRepositoryTest {
         assertThat(questions.get(0).getPosition()).isEqualTo(1);
         assertThat(questions.get(1).getPosition()).isEqualTo(2);
         assertThat(questions.get(2).getPosition()).isEqualTo(3);
+    }
+
+    @Test
+    void shouldOnlyFindQuestionsForSpecifiedQuiz() {
+        User user = new User();
+        user.setUsername("question-filter-test-user");
+        user.setEmail("question-filter@example.com");
+        user.setPasswordHash("temporary-test-hash");
+
+        userRepository.save(user);
+
+        Quiz firstQuiz = new Quiz();
+        firstQuiz.setOwner(user);
+        firstQuiz.setTitle("First Quiz");
+        firstQuiz.setDescription("First quiz.");
+        firstQuiz.setStatus(QuizStatus.DRAFT);
+
+        Quiz secondQuiz = new Quiz();
+        secondQuiz.setOwner(user);
+        secondQuiz.setTitle("Second Quiz");
+        secondQuiz.setDescription("Second quiz.");
+        secondQuiz.setStatus(QuizStatus.DRAFT);
+
+        quizRepository.saveAll(
+                List.of(firstQuiz, secondQuiz)
+        );
+
+        Question firstQuizQuestion = new Question();
+        firstQuizQuestion.setQuiz(firstQuiz);
+        firstQuizQuestion.setQuestionText("First quiz question");
+        firstQuizQuestion.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
+        firstQuizQuestion.setPosition(1);
+
+        Question secondQuizQuestion = new Question();
+        secondQuizQuestion.setQuiz(secondQuiz);
+        secondQuizQuestion.setQuestionText("Second quiz question");
+        secondQuizQuestion.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
+        secondQuizQuestion.setPosition(1);
+
+        questionRepository.saveAll(
+                List.of(firstQuizQuestion, secondQuizQuestion)
+        );
+
+        List<Question> questions =
+                questionRepository.findByQuizIdOrderByPositionAsc(
+                        firstQuiz.getId()
+                );
+
+        assertThat(questions).hasSize(1);
+
+        assertThat(questions.get(0).getQuestionText())
+                .isEqualTo("First quiz question");
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenQuizHasNoQuestions() {
+        User user = new User();
+        user.setUsername("empty-quiz-test-user");
+        user.setEmail("empty-quiz@example.com");
+        user.setPasswordHash("temporary-test-hash");
+
+        userRepository.save(user);
+
+        Quiz quiz = new Quiz();
+        quiz.setOwner(user);
+        quiz.setTitle("Empty Quiz");
+        quiz.setDescription("Quiz with no questions");
+        quiz.setStatus(QuizStatus.DRAFT);
+
+        quizRepository.saveAndFlush(quiz);
+
+        List<Question> questions =
+                questionRepository.findByQuizIdOrderByPositionAsc(
+                        quiz.getId()
+                );
+
+        assertThat(questions).isEmpty();
     }
 }

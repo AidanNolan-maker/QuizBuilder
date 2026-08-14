@@ -168,4 +168,98 @@ public class QuestionServiceImplTest {
         verifyNoInteractions(questionMapper);
         verifyNoInteractions(questionRepository);
     }
+
+    @Test
+    void shouldGetQuestionsByQuizId() {
+        Question question1 = new Question();
+        question1.setId(10L);
+        question1.setQuestionText("First question");
+        question1.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
+        question1.setPosition(1);
+
+        Question question2 = new Question();
+        question2.setId(11L);
+        question2.setQuestionText("Second question");
+        question2.setQuestionType(QuestionType.MULTIPLE_CHOICE_SINGLE);
+        question2.setPosition(2);
+
+        QuestionResponseDTO response1 = new QuestionResponseDTO(
+                10L,
+                1L,
+                "First question",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                1,
+                List.of(),
+                null,
+                null
+        );
+
+        QuestionResponseDTO response2 = new QuestionResponseDTO(
+                11L,
+                1L,
+                "Second question",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                2,
+                List.of(),
+                null,
+                null
+        );
+
+        when(quizRepository.findById(1L))
+                .thenReturn(Optional.of(quiz));
+
+        when(questionRepository.findByQuizIdOrderByPositionAsc(1L))
+                .thenReturn(List.of(question1, question2));
+
+        when(questionMapper.toResponseDTO(question1))
+                .thenReturn(response1);
+
+        when(questionMapper.toResponseDTO(question2))
+                .thenReturn(response2);
+
+        List<QuestionResponseDTO> result =
+                questionService.getQuestionsByQuizId(1L);
+
+        assertThat(result)
+            .containsExactly(response1, response2);
+
+        verify(quizRepository).findById(1L);
+        verify(questionRepository)
+                .findByQuizIdOrderByPositionAsc(1L);
+        verify(questionMapper).toResponseDTO(question1);
+        verify(questionMapper).toResponseDTO(question2);
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenQuizHasNoQuestions() {
+        when(quizRepository.findById(1L))
+                .thenReturn(Optional.of(quiz));
+
+        when(questionRepository.findByQuizIdOrderByPositionAsc(1L))
+                .thenReturn(List.of());
+
+        List<QuestionResponseDTO> result =
+                questionService.getQuestionsByQuizId(1L);
+
+        assertThat(result).isEmpty();
+
+        verify(quizRepository).findById(1L);
+        verify(questionRepository).findByQuizIdOrderByPositionAsc(1L);
+        verifyNoInteractions(questionMapper);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenGettingQuestionsForNonexistentQuiz() {
+        when(quizRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.getQuestionsByQuizId(999L)
+        )
+                .isInstanceOf(QuizNotFoundException.class)
+                .hasMessage("Quiz not found: 999");
+
+        verifyNoInteractions(questionRepository);
+        verifyNoInteractions(questionMapper);
+    }
 }
