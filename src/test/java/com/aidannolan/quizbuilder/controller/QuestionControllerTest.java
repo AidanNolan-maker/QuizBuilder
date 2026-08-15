@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.util.List;
 
@@ -22,8 +23,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 @WebMvcTest(QuestionController.class)
+@WithMockUser
 public class QuestionControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -51,6 +54,7 @@ public class QuestionControllerTest {
 
         mockMvc.perform(
                     post("/api/quizzes/1/questions")
+                            .with(csrf())
                             .contentType("application/json")
                             .content("""
                                     {
@@ -95,6 +99,7 @@ public class QuestionControllerTest {
     void shouldRejectQuestionWithMultipleCorrectAnswers() throws Exception {
         mockMvc.perform(
                     post("/api/quizzes/1/questions")
+                            .with(csrf())
                             .contentType("application/json")
                             .content("""
                                     {
@@ -132,8 +137,9 @@ public class QuestionControllerTest {
 
         mockMvc.perform(
                         post("/api/quizzes/999/questions")
-                            .contentType("application/json")
-                            .content("""
+                                .with(csrf())
+                                .contentType("application/json")
+                                .content("""
                                     {
                                         "questionText":
                                             "Which keyword is used to inherit from a class?",
@@ -309,6 +315,7 @@ public class QuestionControllerTest {
 
         mockMvc.perform(
                     put("/api/quizzes/1/questions/10")
+                            .with(csrf())
                             .contentType("application/json")
                             .content("""
                                     {
@@ -357,6 +364,7 @@ public class QuestionControllerTest {
 
         mockMvc.perform(
                     put("/api/quizzes/1/questions/999")
+                            .with(csrf())
                             .contentType("application/json")
                             .content("""
                                     {
@@ -392,6 +400,7 @@ public class QuestionControllerTest {
 
         mockMvc.perform(
                     put("/api/quizzes/1/questions/10")
+                            .with(csrf())
                             .contentType("application/json")
                             .content("""
                                     {
@@ -425,6 +434,7 @@ public class QuestionControllerTest {
 
         mockMvc.perform(
                     delete("/api/quizzes/1/questions/10")
+                            .with(csrf())
                 )
                 .andExpect(status().isNoContent());
 
@@ -440,6 +450,7 @@ public class QuestionControllerTest {
 
         mockMvc.perform(
                     delete("/api/quizzes/1/questions/999")
+                            .with(csrf())
                 )
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title")
@@ -458,6 +469,7 @@ public class QuestionControllerTest {
 
         mockMvc.perform(
                     delete("/api/quizzes/1/questions/10")
+                            .with(csrf())
                 )
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title")

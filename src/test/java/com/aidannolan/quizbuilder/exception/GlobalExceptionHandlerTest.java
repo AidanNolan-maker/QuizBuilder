@@ -46,4 +46,40 @@ public class GlobalExceptionHandlerTest {
         assertThat(result.getDetail())
                 .isEqualTo("User not found: 999");
     }
+
+    @Test
+    void shouldHandleDuplicateUsernameException() {
+        DuplicateUsernameException exception =
+                new DuplicateUsernameException("aidan");
+
+        ProblemDetail response =
+                handler.handleDuplicateUsername(exception);
+
+        assertThat(response.getStatus())
+                .isEqualTo(HttpStatus.CONFLICT.value());
+
+        assertThat(response.getTitle())
+                .isEqualTo("Username Already Exists");
+
+        assertThat(response.getDetail())
+                .isEqualTo("Username already exists: aidan");
+    }
+
+    @Test
+    void shouldHandleDuplicateEmailException() {
+        DuplicateEmailException exception =
+                new DuplicateEmailException("aidan@example.com");
+
+        ProblemDetail response =
+                handler.handleDuplicateEmail(exception);
+
+        assertThat(response.getStatus())
+                .isEqualTo(HttpStatus.CONFLICT.value());
+
+        assertThat(response.getTitle())
+                .isEqualTo("Email Already Exists");
+
+        assertThat(response.getDetail())
+                .isEqualTo("Email already exists: aidan@example.com");
+    }
 }

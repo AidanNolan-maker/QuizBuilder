@@ -13,6 +13,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.time.LocalDateTime;
 
@@ -21,8 +22,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 @WebMvcTest(QuizController.class)
+@WithMockUser
 public class QuizControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -57,6 +60,7 @@ public class QuizControllerTest {
 
         mockMvc.perform(
                 post("/api/quizzes")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
             )
@@ -82,8 +86,9 @@ public class QuizControllerTest {
 
         mockMvc.perform(
                     post("/api/quizzes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
                 )
                 .andExpect(status().isBadRequest());
     }
@@ -113,6 +118,7 @@ public class QuizControllerTest {
 
         mockMvc.perform(
                     put("/api/quizzes/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {
@@ -142,6 +148,7 @@ public class QuizControllerTest {
     void shouldRejectQuizWithBlankTitleWhenUpdating() throws Exception {
         mockMvc.perform(
                     put("/api/quizzes/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {
@@ -165,6 +172,7 @@ public class QuizControllerTest {
 
         mockMvc.perform(
                     put("/api/quizzes/999")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {
@@ -187,6 +195,7 @@ public class QuizControllerTest {
     void shouldDeleteQuiz() throws Exception {
         mockMvc.perform(
                     delete("/api/quizzes/1")
+                            .with(csrf())
                 )
                 .andExpect(status().isNoContent());
 
@@ -201,6 +210,7 @@ public class QuizControllerTest {
 
         mockMvc.perform(
                     delete("/api/quizzes/999")
+                            .with(csrf())
                 )
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title")
