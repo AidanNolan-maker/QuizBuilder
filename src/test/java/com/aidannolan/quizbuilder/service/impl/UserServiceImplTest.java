@@ -1,11 +1,15 @@
 package com.aidannolan.quizbuilder.service.impl;
 
+import com.aidannolan.quizbuilder.dto.LoginRequestDTO;
+import com.aidannolan.quizbuilder.dto.LoginResponseDTO;
 import com.aidannolan.quizbuilder.dto.RegisterRequestDTO;
 import com.aidannolan.quizbuilder.dto.UserResponseDTO;
 import com.aidannolan.quizbuilder.entity.User;
 import com.aidannolan.quizbuilder.exception.DuplicateEmailException;
 import com.aidannolan.quizbuilder.exception.DuplicateUsernameException;
+import com.aidannolan.quizbuilder.exception.InvalidCredentialsException;
 import com.aidannolan.quizbuilder.repository.UserRepository;
+import com.aidannolan.quizbuilder.service.JwtService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -19,7 +23,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -32,6 +36,9 @@ public class UserServiceImplTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private JwtService jwtService;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -203,5 +210,105 @@ public class UserServiceImplTest {
         assertThat(result.username()).isEqualTo("aidan");
         assertThat(result.email())
                 .isEqualTo("aidan@example.com");
+    }
+
+    @Test
+    void shouldLoginUser() {
+        LoginRequestDTO request = new LoginRequestDTO(
+                "aidan",
+                "password123"
+        );
+
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("aidan");
+        user.setEmail("aidan@example.com");
+        user.setPasswordHash("encoded-password");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches(
+                "password123",
+                "encoded-password"
+        )).thenReturn(true);
+
+        when(jwtService.generateToken("aidan"))
+                .thenReturn("jwt-token");
+
+        LoginResponseDTO result =
+                userService.loginUser(request);
+
+        assertThat(result.token())
+                .isEqualTo("jwt-token");
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(passwordEncoder)
+                .matches(
+                        "password123",
+                        "encoded-password"
+                );
+
+        verify(jwtService)
+                .generateToken("aidan");
+    }
+
+    @Test
+    void shouldRejectLoginWhenUsernameDoesNotExist() {
+        LoginRequestDTO request = new LoginRequestDTO(
+                "unknown",
+                "password123"
+        );
+
+        when(userRepository.findByUsername("unknown"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> userService.loginUser(request)
+        )
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Invalid username or password");
+
+        verifyNoInteractions(passwordEncoder);
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void shouldRejectLoginWhenPasswordIsIncorrect() {
+        LoginRequestDTO request = new LoginRequestDTO(
+                "aidan",
+                "wrongPassword"
+        );
+
+        User user = new User();
+        user.setUsername("aidan");
+        user.setPasswordHash("encoded-password");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches(
+                "wrongPassword",
+                "encoded-password"
+        )).thenReturn(false);
+
+        assertThatThrownBy(
+                () -> userService.loginUser(request)
+        )
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Invalid username or password");
+
+        verify(passwordEncoder)
+                .matches(
+                        "wrongPassword",
+                        "encoded-password"
+                );
+
+        verifyNoInteractions(jwtService);
+
+        verify(jwtService, never())
+                .generateToken(anyString());
     }
 }

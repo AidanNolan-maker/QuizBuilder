@@ -1,5 +1,7 @@
 package com.aidannolan.quizbuilder.controller;
 
+import com.aidannolan.quizbuilder.dto.LoginRequestDTO;
+import com.aidannolan.quizbuilder.dto.LoginResponseDTO;
 import com.aidannolan.quizbuilder.dto.RegisterRequestDTO;
 import com.aidannolan.quizbuilder.dto.UserResponseDTO;
 import com.aidannolan.quizbuilder.service.UserService;
@@ -20,5 +22,13 @@ public class AuthController {
             @Valid @RequestBody RegisterRequestDTO request
     ) {
         return userService.registerUser(request);
+    }
+
+    @PostMapping("/login")
+    @ResponseStatus(HttpStatus.OK)
+    public LoginResponseDTO login(
+            @Valid @RequestBody LoginRequestDTO request
+    ) {
+        return userService.loginUser(request);
     }
 }

@@ -85,4 +85,19 @@ public class GlobalExceptionHandler {
 
         return  problemDetail;
     }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ProblemDetail handleInvalidCredentials(
+            InvalidCredentialsException exception
+    ) {
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.UNAUTHORIZED,
+                        exception.getMessage()
+                );
+
+        problemDetail.setTitle("Invalid Credentials");
+
+        return problemDetail;
+    }
 }

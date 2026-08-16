@@ -2,6 +2,9 @@ package com.aidannolan.quizbuilder.controller;
 
 import com.aidannolan.quizbuilder.dto.RegisterRequestDTO;
 import com.aidannolan.quizbuilder.dto.UserResponseDTO;
+import com.aidannolan.quizbuilder.dto.LoginRequestDTO;
+import com.aidannolan.quizbuilder.dto.LoginResponseDTO;
+import com.aidannolan.quizbuilder.exception.InvalidCredentialsException;
 import com.aidannolan.quizbuilder.exception.DuplicateEmailException;
 import com.aidannolan.quizbuilder.exception.DuplicateUsernameException;
 import com.aidannolan.quizbuilder.service.UserService;
@@ -128,6 +131,98 @@ public class AuthControllerTest {
                                         "username": "",
                                         "email": "not-an-email",
                                         "password": "123"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(userService);
+    }
+
+    @Test
+    void shouldLoginUser() throws Exception {
+        LoginResponseDTO response =
+                new LoginResponseDTO("jwt-token");
+
+        when(userService.loginUser(any(LoginRequestDTO.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(
+                    post("/api/auth/login")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                        "username": "aidan",
+                                        "password": "password123"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token")
+                        .value("jwt-token"));
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenUsernameDoesNotExist()  throws Exception {
+        when(userService.loginUser(any(LoginRequestDTO.class)))
+                .thenThrow(new InvalidCredentialsException());
+
+        mockMvc.perform(
+                    post("/api/auth/login")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                        "username": "unknown",
+                                        "password": "password123"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.title")
+                        .value("Invalid Credentials"))
+                .andExpect(jsonPath("$.status")
+                        .value(401))
+                .andExpect(jsonPath("$.detail")
+                        .value("Invalid username or password"));
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenPasswordIsIncorrect() throws Exception {
+        when(userService.loginUser(any(LoginRequestDTO.class)))
+                .thenThrow(new InvalidCredentialsException());
+
+        mockMvc.perform(
+                    post("/api/auth/login")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                        "username": "aidan",
+                                        "password": "wrongPassword"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.title")
+                        .value("Invalid Credentials"))
+                .andExpect(jsonPath("$.status")
+                        .value(401))
+                .andExpect(jsonPath("$.detail")
+                        .value("Invalid username or password"));
+    }
+
+    @Test
+    void shouldRejectInvalidLoginRequest() throws Exception {
+        mockMvc.perform(
+                    post("/api/auth/login")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                        "username": "",
+                                        "password": ""
                                     }
                                     """)
                 )
