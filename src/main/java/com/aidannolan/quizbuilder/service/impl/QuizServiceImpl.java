@@ -10,6 +10,7 @@ import com.aidannolan.quizbuilder.exception.UserNotFoundException;
 import com.aidannolan.quizbuilder.mapper.QuizMapper;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
 import com.aidannolan.quizbuilder.repository.UserRepository;
+import com.aidannolan.quizbuilder.service.AuthenticationService;
 import com.aidannolan.quizbuilder.service.QuizService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,12 +23,20 @@ public class QuizServiceImpl implements QuizService {
     private final QuizRepository quizRepository;
     private final UserRepository userRepository;
     private final QuizMapper quizMapper;
+    private final AuthenticationService authenticationService;
 
     @Override
     public QuizResponseDTO createQuiz(QuizRequestDTO request) {
-        User owner = userRepository.findById(request.ownerId())
-                .orElseThrow(() ->
-                        new UserNotFoundException(request.ownerId()));
+        String username =
+                authenticationService.getCurrentUsername();
+
+        User owner =
+                userRepository.findByUsername(username)
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Authenticated user not found: "
+                                            + username
+                                ));
 
         Quiz quiz = new Quiz();
         quiz.setOwner(owner);
@@ -35,16 +44,31 @@ public class QuizServiceImpl implements QuizService {
         quiz.setDescription(request.description());
         quiz.setStatus(request.status());
 
-        Quiz savedQuiz = quizRepository.save(quiz);
+        Quiz savedQuiz =
+                quizRepository.save(quiz);
 
         return quizMapper.toResponseDTO(savedQuiz);
-
     }
 
     @Override
     public QuizResponseDTO getQuizById(Long id) {
-        Quiz quiz = quizRepository.findById(id)
-                .orElseThrow(() -> new QuizNotFoundException(id));
+        String username =
+                authenticationService.getCurrentUsername();
+
+        User owner =
+                userRepository.findByUsername(username)
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Authenticated user not found: "
+                                            + username
+                                ));
+
+        Quiz quiz =
+                quizRepository.findByIdAndOwnerId(
+                        id,
+                        owner.getId()
+                ).orElseThrow(() ->
+                        new QuizNotFoundException(id));
 
         return quizMapper.toResponseDTO(quiz);
     }
@@ -62,22 +86,55 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     public QuizResponseDTO updateQuiz(Long id, QuizUpdateRequestDTO request) {
-        Quiz quiz = quizRepository.findById(id)
-                .orElseThrow(() -> new QuizNotFoundException(id));
+        String username =
+                authenticationService.getCurrentUsername();
+
+        User owner =
+                userRepository.findByUsername(username)
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Authenticated user not found: "
+                                            + username
+                                ));
+
+        Quiz quiz =
+                quizRepository.findByIdAndOwnerId(
+                        id,
+                        owner.getId()
+                ).orElseThrow(() ->
+                        new QuizNotFoundException(id));
 
         quiz.setTitle(request.title());
         quiz.setDescription(request.description());
         quiz.setStatus(request.status());
 
-        Quiz updatedQuiz = quizRepository.save(quiz);
+        Quiz updatedQuiz =
+                quizRepository.save(quiz);
 
         return quizMapper.toResponseDTO(updatedQuiz);
     }
 
     @Override
     public void deleteQuiz(Long id) {
-        Quiz existingQuiz = quizRepository.findById(id)
-                .orElseThrow(() -> new QuizNotFoundException(id));
+        String username =
+                authenticationService.getCurrentUsername();
+
+        User owner =
+                userRepository.findByUsername(username)
+                        .orElseThrow(
+                                () -> new IllegalStateException(
+                                        "Authenticated user not found: "
+                                            + username
+                                )
+                        );
+
+        Quiz existingQuiz =
+                quizRepository.findByIdAndOwnerId(
+                        id,
+                        owner.getId()
+                ).orElseThrow(
+                        () -> new QuizNotFoundException(id)
+                );
 
         quizRepository.delete(existingQuiz);
     }

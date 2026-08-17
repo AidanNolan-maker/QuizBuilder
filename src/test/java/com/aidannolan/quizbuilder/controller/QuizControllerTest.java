@@ -39,7 +39,6 @@ public class QuizControllerTest {
     @Test
     void shouldCreateQuiz() throws Exception {
         QuizRequestDTO request = new QuizRequestDTO(
-                1L,
                 "Java Fundamentals",
                 "A quiz covering basic Java concepts.",
                 QuizStatus.DRAFT
@@ -78,7 +77,6 @@ public class QuizControllerTest {
     @Test
     void shouldRejectQuizWithBlankTitle() throws Exception {
         QuizRequestDTO request = new QuizRequestDTO(
-                1L,
                 "",
                 "A quiz covering basic Java concepts.",
                 QuizStatus.DRAFT

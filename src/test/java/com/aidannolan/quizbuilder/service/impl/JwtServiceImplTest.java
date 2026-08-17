@@ -1,12 +1,18 @@
 package com.aidannolan.quizbuilder.service.impl;
 
-import com.aidannolan.quizbuilder.config.JwtConfig;
 import com.aidannolan.quizbuilder.service.JwtService;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.*;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.interfaces.RSAPublicKey;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,18 +22,46 @@ public class JwtServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        JwtConfig jwtConfig = new JwtConfig();
+       try {
+           KeyPairGenerator generator =
+                   KeyPairGenerator.getInstance("RSA");
 
-        var keyPair = jwtConfig.jwtKeyPair();
+           generator.initialize(2048);
 
-        JwtEncoder jwtEncoder =
-                jwtConfig.jwtEncoder(keyPair);
+           KeyPair keyPair =
+                   generator.generateKeyPair();
 
-        jwtDecoder =
-                jwtConfig.jwtDecoder(keyPair);
+           RSAKey rsaKey =
+                   new RSAKey.Builder(
+                           (RSAPublicKey) keyPair.getPublic()
+                   )
+                           .privateKey(keyPair.getPrivate())
+                           .build();
 
-        jwtService =
-                new JwtServiceImpl(jwtEncoder);
+           JWKSource<SecurityContext> jwkSource =
+                   new ImmutableJWKSet<>(
+                           new JWKSet(rsaKey)
+                   );
+
+           JwtEncoder jwtEncoder =
+                   new NimbusJwtEncoder(jwkSource);
+
+           jwtDecoder =
+                   NimbusJwtDecoder
+                           .withPublicKey(
+                                   (RSAPublicKey)
+                                        keyPair.getPublic()
+                           )
+                           .build();
+
+           jwtService =
+                   new JwtServiceImpl(jwtEncoder);
+       } catch (Exception exception) {
+           throw new IllegalStateException(
+                   "Failed to create test JWT configuration",
+                   exception
+           );
+       }
     }
 
     @Test

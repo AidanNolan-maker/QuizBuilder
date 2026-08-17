@@ -5,12 +5,15 @@ import com.aidannolan.quizbuilder.dto.question.QuestionResponseDTO;
 import com.aidannolan.quizbuilder.entity.Answer;
 import com.aidannolan.quizbuilder.entity.Question;
 import com.aidannolan.quizbuilder.entity.Quiz;
+import com.aidannolan.quizbuilder.entity.User;
 import com.aidannolan.quizbuilder.exception.QuestionNotFoundException;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.mapper.QuestionMapper;
 import com.aidannolan.quizbuilder.mapper.AnswerMapper;
+import com.aidannolan.quizbuilder.repository.UserRepository;
 import com.aidannolan.quizbuilder.repository.QuestionRepository;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
+import com.aidannolan.quizbuilder.service.AuthenticationService;
 import com.aidannolan.quizbuilder.service.QuestionService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -21,10 +24,12 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class QuestionServiceImpl implements QuestionService {
+    private final UserRepository userRepository;
     private final QuestionRepository questionRepository;
     private final QuizRepository quizRepository;
     private final QuestionMapper questionMapper;
     private final AnswerMapper answerMapper;
+    private final AuthenticationService authenticationService;
 
     @Override
     @Transactional
@@ -32,8 +37,24 @@ public class QuestionServiceImpl implements QuestionService {
             Long quizId,
             QuestionRequestDTO request
     ) {
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new QuizNotFoundException(quizId));
+        String username =
+                authenticationService.getCurrentUsername();
+
+        User owner =
+                userRepository.findByUsername(username)
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Authenticated user not found: "
+                                            + username
+                                ));
+
+        Quiz quiz =
+                quizRepository.findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                ).orElseThrow(() ->
+                        new QuizNotFoundException(quizId));
+
 
         Question question = questionMapper.toEntity(request);
 
@@ -51,8 +72,22 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     @Transactional
     public List<QuestionResponseDTO> getQuestionsByQuizId(Long quizId) {
-        quizRepository.findById(quizId)
-                .orElseThrow(() -> new QuizNotFoundException(quizId));
+        String username =
+                authenticationService.getCurrentUsername();
+
+        User owner =
+                userRepository.findByUsername(username)
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Authenticated user not found: "
+                                            + username
+                                ));
+
+        quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        ).orElseThrow(() ->
+                new QuizNotFoundException(quizId));
 
         return questionRepository
                 .findByQuizIdOrderByPositionAsc(quizId)
@@ -64,8 +99,31 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     @Transactional
     public QuestionResponseDTO getQuestionById(Long quizId, Long questionId) {
-        Question question = questionRepository.findByIdAndQuizId(questionId, quizId)
-                .orElseThrow(() -> new QuestionNotFoundException(questionId));
+        String username =
+                authenticationService.getCurrentUsername();
+
+        User owner =
+                userRepository.findByUsername(username)
+                    .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Authenticated user not found: "
+                                            + username
+                                ));
+
+        quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        ).orElseThrow(() ->
+                new QuizNotFoundException(quizId));
+
+        Question question =
+                questionRepository
+                        .findByIdAndQuizId(questionId, quizId)
+                        .orElseThrow(
+                                () -> new QuestionNotFoundException(
+                                        questionId
+                                )
+                        );
 
         return questionMapper.toResponseDTO(question);
     }
@@ -77,11 +135,31 @@ public class QuestionServiceImpl implements QuestionService {
             Long questionId,
             QuestionRequestDTO request
     ) {
-        Question question = questionRepository
-                .findByIdAndQuizId(questionId, quizId)
-                .orElseThrow(
-                        () -> new QuestionNotFoundException(questionId)
-                );
+        String username =
+                authenticationService.getCurrentUsername();
+
+        User owner =
+                userRepository.findByUsername(username)
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Authenticated user not found: "
+                                            + username
+                                ));
+
+        quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        ).orElseThrow(() ->
+                new QuizNotFoundException(quizId));
+
+        Question question =
+                questionRepository
+                        .findByIdAndQuizId(questionId, quizId)
+                        .orElseThrow(
+                                () -> new QuestionNotFoundException(
+                                        questionId
+                                )
+                        );
 
         questionMapper.updateEntity(question, request);
 
@@ -106,11 +184,31 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     @Transactional
     public void deleteQuestion(Long quizId, Long questionId) {
-        Question question = questionRepository
-                .findByIdAndQuizId(questionId, quizId)
-                .orElseThrow(
-                        () -> new QuestionNotFoundException(questionId)
-                );
+        String username =
+                authenticationService.getCurrentUsername();
+
+        User owner =
+                userRepository.findByUsername(username)
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Authenticated user not found: "
+                                            + username
+                                ));
+
+        quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        ).orElseThrow(() ->
+                new QuizNotFoundException(quizId));
+
+        Question question =
+                questionRepository
+                        .findByIdAndQuizId(questionId, quizId)
+                        .orElseThrow(
+                                () -> new QuestionNotFoundException(
+                                        questionId
+                                )
+                        );
 
         questionRepository.delete(question);
     }

@@ -100,4 +100,19 @@ public class GlobalExceptionHandler {
 
         return problemDetail;
     }
+
+    @ExceptionHandler(AuthenticatedUserNotFoundException.class)
+    public ProblemDetail handleAuthenticatedUserNotFound(
+            AuthenticatedUserNotFoundException exception
+    ) {
+        ProblemDetail problemDetail =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.NOT_FOUND,
+                        exception.getMessage()
+                );
+
+        problemDetail.setTitle("Authenticated User Not Found");
+
+        return problemDetail;
+    }
 }

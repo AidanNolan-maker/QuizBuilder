@@ -7,12 +7,15 @@ import com.aidannolan.quizbuilder.entity.Answer;
 import com.aidannolan.quizbuilder.entity.Question;
 import com.aidannolan.quizbuilder.entity.QuestionType;
 import com.aidannolan.quizbuilder.entity.Quiz;
+import com.aidannolan.quizbuilder.entity.User;
 import com.aidannolan.quizbuilder.exception.QuestionNotFoundException;
 import com.aidannolan.quizbuilder.exception.QuizNotFoundException;
 import com.aidannolan.quizbuilder.mapper.QuestionMapper;
 import com.aidannolan.quizbuilder.mapper.AnswerMapper;
 import com.aidannolan.quizbuilder.repository.QuestionRepository;
 import com.aidannolan.quizbuilder.repository.QuizRepository;
+import com.aidannolan.quizbuilder.repository.UserRepository;
+import com.aidannolan.quizbuilder.service.AuthenticationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +45,12 @@ public class QuestionServiceImplTest {
 
     @Mock
     private AnswerMapper answerMapper;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private AuthenticationService authenticationService;
 
     @InjectMocks
     private QuestionServiceImpl questionService;
@@ -96,6 +105,11 @@ public class QuestionServiceImplTest {
 
     @Test
     void shouldCreateQuestion() {
+        User owner = new User();
+        owner.setId(10L);
+
+        quiz.setOwner(owner);
+
         QuestionRequestDTO request = new QuestionRequestDTO(
                 "Which keyword is used to inherit from a class?",
                 QuestionType.MULTIPLE_CHOICE_SINGLE,
@@ -114,8 +128,16 @@ public class QuestionServiceImplTest {
                 )
         );
 
-        when(quizRepository.findById(1L))
-                .thenReturn(Optional.of(quiz));
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                1L,
+                owner.getId()
+        )).thenReturn(Optional.of(quiz));
 
         when(questionMapper.toEntity(request))
                 .thenReturn(question);
@@ -140,17 +162,33 @@ public class QuestionServiceImplTest {
                                 .isSameAs(question)
                 );
 
-        verify(quizRepository).findById(1L);
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+            .findByIdAndOwnerId(
+                    1L,
+                    owner.getId()
+            );
+
         verify(questionMapper).toEntity(request);
         verify(questionRepository).save(question);
         verify(questionMapper).toResponseDTO(question);
     }
 
     @Test
-    void shouldThrowExceptionWhenQuizDoesNotExist() {
+    void shouldThrowExceptionWhenCreatingQuestionForQuizNotOwnedByAuthenticatedUser() {
+        Long quizId = 1L;
+
+        User owner = new User();
+        owner.setId(10L);
+
         QuestionRequestDTO request = new QuestionRequestDTO(
                 "Which keyword is used to inherit from a class?",
-                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                    QuestionType.MULTIPLE_CHOICE_SINGLE,
                 1,
                 List.of(
                         new AnswerRequestDTO(
@@ -161,22 +199,105 @@ public class QuestionServiceImplTest {
                 )
         );
 
-        when(quizRepository.findById(999L))
-                .thenReturn(Optional.empty());
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.empty());
 
         assertThatThrownBy(
-                () -> questionService.createQuestion(999L, request)
+                () -> questionService.createQuestion(
+                        quizId,
+                        request
+                )
         )
                 .isInstanceOf(QuizNotFoundException.class)
-                .hasMessage("Quiz not found: 999");
+                .hasMessage("Quiz not found: " + quizId);
 
-        verify(quizRepository).findById(999L);
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
+
         verifyNoInteractions(questionMapper);
         verifyNoInteractions(questionRepository);
     }
 
     @Test
+    void shouldThrowExceptionWhenQuizDoesNotExist() {
+       Long quizId = 999L;
+
+       User owner = new User();
+       owner.setId(10L);
+
+       QuestionRequestDTO request = new QuestionRequestDTO(
+               "Which keyword is used to inherit from a class?",
+               QuestionType.MULTIPLE_CHOICE_SINGLE,
+               1,
+               List.of(
+                       new AnswerRequestDTO(
+                               "extends",
+                               true,
+                               1
+                       )
+               )
+       );
+
+       when(authenticationService.getCurrentUsername())
+               .thenReturn("aidan");
+
+       when(userRepository.findByUsername("aidan"))
+               .thenReturn(Optional.of(owner));
+
+       when(quizRepository.findByIdAndOwnerId(
+               quizId,
+               owner.getId()
+       )).thenReturn(Optional.empty());
+
+       assertThatThrownBy(
+               () -> questionService.createQuestion(
+                       quizId,
+                       request
+               )
+       )
+               .isInstanceOf(QuizNotFoundException.class)
+               .hasMessage("Quiz not found: 999");
+
+       verify(authenticationService)
+               .getCurrentUsername();
+
+       verify(userRepository)
+               .findByUsername("aidan");
+
+       verify(quizRepository)
+               .findByIdAndOwnerId(
+                       quizId,
+                       owner.getId()
+               );
+
+       verifyNoInteractions(questionMapper);
+       verifyNoInteractions(questionRepository);
+    }
+
+    @Test
     void shouldGetQuestionsByQuizId() {
+        User owner = new User();
+        owner.setId(10L);
+
+        quiz.setOwner(owner);
+
         Question question1 = new Question();
         question1.setId(10L);
         question1.setQuestionText("First question");
@@ -211,8 +332,16 @@ public class QuestionServiceImplTest {
                 null
         );
 
-        when(quizRepository.findById(1L))
-                .thenReturn(Optional.of(quiz));
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                1L,
+                owner.getId()
+        )).thenReturn(Optional.of(quiz));
 
         when(questionRepository.findByQuizIdOrderByPositionAsc(1L))
                 .thenReturn(List.of(question1, question2));
@@ -229,7 +358,15 @@ public class QuestionServiceImplTest {
         assertThat(result)
             .containsExactly(response1, response2);
 
-        verify(quizRepository).findById(1L);
+        verify(authenticationService)
+                .getCurrentUsername();
+        verify(userRepository)
+                .findByUsername("aidan");
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        1L,
+                        owner.getId()
+                );
         verify(questionRepository)
                 .findByQuizIdOrderByPositionAsc(1L);
         verify(questionMapper).toResponseDTO(question1);
@@ -238,8 +375,21 @@ public class QuestionServiceImplTest {
 
     @Test
     void shouldReturnEmptyListWhenQuizHasNoQuestions() {
-        when(quizRepository.findById(1L))
-                .thenReturn(Optional.of(quiz));
+        User owner = new User();
+        owner.setId(10L);
+
+        quiz.setOwner(owner);
+
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                1L,
+                owner.getId()
+        )).thenReturn(Optional.of(quiz));
 
         when(questionRepository.findByQuizIdOrderByPositionAsc(1L))
                 .thenReturn(List.of());
@@ -249,21 +399,54 @@ public class QuestionServiceImplTest {
 
         assertThat(result).isEmpty();
 
-        verify(quizRepository).findById(1L);
+        verify(authenticationService)
+                .getCurrentUsername();
+        verify(userRepository)
+                .findByUsername("aidan");
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        1L,
+                        owner.getId()
+                );
         verify(questionRepository).findByQuizIdOrderByPositionAsc(1L);
         verifyNoInteractions(questionMapper);
     }
 
     @Test
     void shouldThrowExceptionWhenGettingQuestionsForNonexistentQuiz() {
-        when(quizRepository.findById(999L))
-                .thenReturn(Optional.empty());
+        Long quizId = 999L;
+
+        User owner = new User();
+        owner.setId(10L);
+
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.empty());
 
         assertThatThrownBy(
-                () -> questionService.getQuestionsByQuizId(999L)
+                () -> questionService.getQuestionsByQuizId(quizId)
         )
                 .isInstanceOf(QuizNotFoundException.class)
                 .hasMessage("Quiz not found: 999");
+
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
 
         verifyNoInteractions(questionRepository);
         verifyNoInteractions(questionMapper);
@@ -271,6 +454,9 @@ public class QuestionServiceImplTest {
 
     @Test
     void shouldGetQuestionByIdWhenQuestionBelongsToQuiz() {
+        User owner = new User();
+        owner.setId(10L);
+
         Long quizId = 1L;
         Long questionId = 10L;
 
@@ -293,6 +479,17 @@ public class QuestionServiceImplTest {
                 null
         );
 
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.of(quiz));
+
         when(questionRepository.findByIdAndQuizId(
                 questionId,
                 quizId
@@ -309,6 +506,18 @@ public class QuestionServiceImplTest {
 
         assertThat(result).isEqualTo(response);
 
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
+
         verify(questionRepository)
                 .findByIdAndQuizId(questionId, quizId);
 
@@ -318,8 +527,22 @@ public class QuestionServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenQuestionDoesNotExist() {
+        User owner = new User();
+        owner.setId(10L);
+
         Long quizId = 1L;
         Long questionId = 10L;
+
+        when(authenticationService.getCurrentUsername())
+            .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.of(quiz));
 
         when(questionRepository.findByIdAndQuizId(
                 questionId,
@@ -335,6 +558,18 @@ public class QuestionServiceImplTest {
                 .isInstanceOf(QuestionNotFoundException.class)
                 .hasMessage("Question not found: " + questionId);
 
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+            .findByIdAndOwnerId(
+                    quizId,
+                    owner.getId()
+            );
+
         verify(questionRepository)
                 .findByIdAndQuizId(questionId, quizId);
 
@@ -343,8 +578,22 @@ public class QuestionServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenQuestionDoesNotBelongToQuiz() {
+        User owner = new User();
+        owner.setId(10L);
+
         Long requestedQuizId = 1L;
         Long questionId = 10L;
+
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                requestedQuizId,
+                owner.getId()
+        )).thenReturn(Optional.of(quiz));
 
         when(questionRepository.findByIdAndQuizId(
                 questionId,
@@ -360,6 +609,18 @@ public class QuestionServiceImplTest {
                 .isInstanceOf(QuestionNotFoundException.class)
                 .hasMessage("Question not found: " + questionId);
 
+        verify(authenticationService)
+            .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        requestedQuizId,
+                        owner.getId()
+                );
+
         verify(questionRepository)
                 .findByIdAndQuizId(
                         questionId,
@@ -371,6 +632,11 @@ public class QuestionServiceImplTest {
 
     @Test
     void shouldUpdateQuestionAndReplaceAnswers() {
+        User owner = new User();
+        owner.setId(10L);
+
+        quiz.setOwner(owner);
+
         Long quizId = 1L;
         Long questionId = 10L;
 
@@ -448,6 +714,17 @@ public class QuestionServiceImplTest {
                 null
         );
 
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.of(quiz));
+
         when(questionRepository.findByIdAndQuizId(
                 questionId,
                 quizId
@@ -483,6 +760,24 @@ public class QuestionServiceImplTest {
             request
         );
 
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
+
+        verify(questionRepository)
+                .findByIdAndQuizId(
+                        questionId,
+                        quizId
+                );
+
         verify(questionMapper)
                 .updateEntity(existingQuestion, request);
 
@@ -517,6 +812,11 @@ public class QuestionServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenUpdatingQuestionThatDoesNotExist() {
+        User owner = new User();
+        owner.setId(10L);
+
+        quiz.setOwner(owner);
+
         Long quizId = 1L;
         Long questionId = 999L;
 
@@ -533,6 +833,17 @@ public class QuestionServiceImplTest {
                 )
         );
 
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.of(quiz));
+
         when(questionRepository.findByIdAndQuizId(
                 questionId,
                 quizId
@@ -548,9 +859,325 @@ public class QuestionServiceImplTest {
                 .isInstanceOf(QuestionNotFoundException.class)
                 .hasMessage("Question not found: " + questionId);
 
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
+
         verify(questionRepository)
                 .findByIdAndQuizId(questionId, quizId);
 
         verifyNoInteractions(questionMapper);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenGettingQuestionsForQuizNotOwnedByAuthenticatedUser() {
+        Long quizId = 1L;
+
+        User owner = new User();
+        owner.setId(10L);
+
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.getQuestionsByQuizId(quizId)
+        )
+                .isInstanceOf(QuizNotFoundException.class)
+                .hasMessage("Quiz not found: " + quizId);
+
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
+
+        verifyNoInteractions(questionRepository);
+        verifyNoInteractions(questionMapper);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenGettingQuestionFromQuizNotOwnedByAuthenticatedUser() {
+        Long quizId = 1L;
+        Long questionId = 10L;
+
+        User owner = new User();
+        owner.setId(10L);
+
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.getQuestionById(
+                        quizId,
+                        questionId
+                )
+        )
+                .isInstanceOf(QuizNotFoundException.class)
+                .hasMessage("Quiz not found: " + quizId);
+
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
+
+        verifyNoInteractions(questionRepository);
+        verifyNoInteractions(questionMapper);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingQuestionFromQuizNotOwnedByAuthenticatedUser() {
+        Long quizId = 1L;
+        Long questionId = 10L;
+
+        User owner = new User();
+        owner.setId(10L);
+
+        QuestionRequestDTO request = new QuestionRequestDTO(
+                "Updated question",
+                QuestionType.MULTIPLE_CHOICE_SINGLE,
+                1,
+                List.of(
+                        new AnswerRequestDTO(
+                                "Answer",
+                                true,
+                                1
+                        )
+                )
+        );
+
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.updateQuestion(
+                        quizId,
+                        questionId,
+                        request
+                )
+        )
+                .isInstanceOf(QuizNotFoundException.class)
+                .hasMessage("Quiz not found: " + quizId);
+
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
+
+        verifyNoInteractions(questionRepository);
+        verifyNoInteractions(questionMapper);
+        verifyNoInteractions(answerMapper);
+    }
+
+    @Test
+    void shouldDeleteQuestionWhenAuthenticatedUserOwnsQuiz() {
+        Long quizId = 1L;
+        Long questionId = 10L;
+
+        User owner = new User();
+        owner.setId(10L);
+
+        Quiz quiz = new Quiz();
+        quiz.setId(quizId);
+        quiz.setOwner(owner);
+
+        Question question = new Question();
+        question.setId(questionId);
+        question.setQuiz(quiz);
+
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.of(quiz));
+
+        when(questionRepository.findByIdAndQuizId(
+                questionId,
+                quizId
+        )).thenReturn(Optional.of(question));
+
+        questionService.deleteQuestion(
+                quizId,
+                questionId
+        );
+
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
+
+        verify(questionRepository)
+                .findByIdAndQuizId(
+                        questionId,
+                        quizId
+                );
+
+        verify(questionRepository)
+                .delete(question);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDeletingQuestionFromQuizNotOwnedByAuthenticatedUser() {
+        Long quizId = 1L;
+        Long questionId = 10L;
+
+        User owner = new User();
+        owner.setId(10L);
+
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.deleteQuestion(
+                        quizId,
+                        questionId
+                )
+        )
+                .isInstanceOf(QuizNotFoundException.class)
+                .hasMessage("Quiz not found: " + quizId);
+
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
+
+        verifyNoInteractions(questionRepository);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDeletingQuestionThatDoesNotExist() {
+        Long quizId = 1L;
+        Long questionId = 999L;
+
+        User owner = new  User();
+        owner.setId(10L);
+
+        Quiz quiz = new Quiz();
+        quiz.setId(quizId);
+        quiz.setOwner(owner);
+
+        when(authenticationService.getCurrentUsername())
+                .thenReturn("aidan");
+
+        when(userRepository.findByUsername("aidan"))
+                .thenReturn(Optional.of(owner));
+
+        when(quizRepository.findByIdAndOwnerId(
+                quizId,
+                owner.getId()
+        )).thenReturn(Optional.of(quiz));
+
+        when(questionRepository.findByIdAndQuizId(
+                questionId,
+                quizId
+        )).thenReturn(Optional.empty());
+
+        assertThatThrownBy(
+                () -> questionService.deleteQuestion(
+                        quizId,
+                        questionId
+                )
+        )
+                .isInstanceOf(QuestionNotFoundException.class)
+                .hasMessage("Question not found: " + questionId);
+
+        verify(authenticationService)
+                .getCurrentUsername();
+
+        verify(userRepository)
+                .findByUsername("aidan");
+
+        verify(quizRepository)
+                .findByIdAndOwnerId(
+                        quizId,
+                        owner.getId()
+                );
+
+        verify(questionRepository)
+                .findByIdAndQuizId(
+                        questionId,
+                        quizId
+                );
+
+        verify(questionRepository, never())
+                .delete(any());
     }
 }
